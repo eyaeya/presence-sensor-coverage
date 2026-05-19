@@ -43,23 +43,104 @@ var Geo=(function(){
     var vv=norm(cross(d,u));
     return {S:S,d:d,u:u,v:vv};
   }
-  function footprint(fr,aH,aV,h,rangeMax,farBound){
-    if(h>=fr.S.z) return [];
-    var tH=Math.tan(aH),tV=Math.tan(aV),pts=[],N=240,i,b,g,t,P,hd,reach;
-    for(i=0;i<N;i++){
-      b=2*Math.PI*i/N;
-      g=norm(add(add(scale(fr.u,tH*Math.cos(b)),scale(fr.v,tV*Math.sin(b))),fr.d));
-      if(g.z<-1e-9){
-        t=(h-fr.S.z)/g.z;
-        P={x:fr.S.x+g.x*t,y:fr.S.y+g.y*t};
-      } else {
-        hd=norm(v3(g.x,g.y,0));
-        reach=farBound;
-        P={x:fr.S.x+hd.x*reach,y:fr.S.y+hd.y*reach};
-      }
-      pts.push(P);
+  function radialIntervals(fr,aH,aV,h,angle,rangeMax,farBound){
+    var dz=h-fr.S.z, ex=Math.cos(angle), ey=Math.sin(angle);
+    var A=ex*fr.d.x+ey*fr.d.y, T0=dz*fr.d.z;
+    var B=ex*fr.u.x+ey*fr.u.y, U0=dz*fr.u.z;
+    var C=ex*fr.v.x+ey*fr.v.y, V0=dz*fr.v.z;
+    var invH=1/Math.tan(aH), invV=1/Math.tan(aV);
+    var qa=B*B*invH*invH+C*C*invV*invV-A*A;
+    var qb=2*(B*U0*invH*invH+C*V0*invV*invV-A*T0);
+    var qc=U0*U0*invH*invH+V0*V0*invV*invV-T0*T0;
+    var maxR=farBound, rr, ints=[], EPS=1e-9;
+    if(rangeMax!=null){
+      rr=rangeProjectionRadius(rangeMax,fr.S.z,h);
+      if(rr==null) return [];
+      maxR=Math.min(maxR,rr);
     }
-    return rangeMax!=null?clipByRangeDistance(pts,fr,h,rangeMax):pts;
+    function addInterval(lo,hi){
+      lo=Math.max(lo,0);
+      hi=Math.min(hi,maxR);
+      if(hi>lo+1e-6) ints.push([lo,hi]);
+    }
+    if(Math.abs(qa)<EPS){
+      if(Math.abs(qb)<EPS){
+        if(qc<=EPS) addInterval(0,maxR);
+      } else {
+        var r0=-qc/qb;
+        if(qb>0) addInterval(-Infinity,r0);
+        else addInterval(r0,Infinity);
+      }
+    } else {
+      var disc=qb*qb-4*qa*qc;
+      if(disc>=-EPS){
+        if(disc<0) disc=0;
+        var s=Math.sqrt(disc), r1=(-qb-s)/(2*qa), r2=(-qb+s)/(2*qa);
+        if(r1>r2){var tmp=r1;r1=r2;r2=tmp;}
+        if(qa>0) addInterval(r1,r2);
+        else { addInterval(-Infinity,r1); addInterval(r2,Infinity); }
+      }
+    }
+    if(ints.length===0) return [];
+    var tInts=[];
+    if(Math.abs(A)<EPS){
+      if(T0<=1e-9) return [];
+      tInts=[[0,maxR]];
+    } else {
+      var rt=(1e-9-T0)/A;
+      if(A>0) tInts=[[Math.max(0,rt),maxR]];
+      else tInts=[[0,Math.min(maxR,rt)]];
+    }
+    var out=[];
+    for(var i=0;i<ints.length;i++){
+      for(var j=0;j<tInts.length;j++){
+        var lo=Math.max(ints[i][0],tInts[j][0]), hi=Math.min(ints[i][1],tInts[j][1]);
+        if(hi>lo+1e-6) out.push([lo,hi]);
+      }
+    }
+    return out;
+  }
+  function footprint(fr,aH,aV,h,rangeMax,farBound){
+    var N=1440, samples=[], i, a, ints, insideCount=0, firstOut=-1, firstIn=-1;
+    for(i=0;i<N;i++){
+      a=2*Math.PI*i/N;
+      ints=radialIntervals(fr,aH,aV,h,a,rangeMax,farBound);
+      samples.push({a:a, interval:ints.length?ints[0]:null});
+      if(ints.length){insideCount++; if(firstIn<0) firstIn=i;}
+      else if(firstOut<0) firstOut=i;
+    }
+    if(insideCount===0) return [];
+    function pt(angle,r){return {x:fr.S.x+r*Math.cos(angle),y:fr.S.y+r*Math.sin(angle)};}
+    function build(seq,fullCircle){
+      var outer=[],inner=[],hasInner=false,j,smp;
+      for(j=0;j<seq.length;j++){
+        smp=samples[seq[j]];
+        outer.push(pt(smp.a,smp.interval[1]));
+        if(smp.interval[0]>1e-4) hasInner=true;
+      }
+      if(hasInner){
+        for(j=seq.length-1;j>=0;j--){
+          smp=samples[seq[j]];
+          inner.push(pt(smp.a,smp.interval[0]));
+        }
+      }
+      if(hasInner) return outer.concat(inner);
+      if(!fullCircle) return [{x:fr.S.x,y:fr.S.y}].concat(outer);
+      return outer;
+    }
+    if(firstOut<0){
+      return build(samples.map(function(_,idx){return idx;}),true);
+    }
+    var seq=[], idx, prev;
+    for(i=1;i<=N;i++){
+      idx=(firstOut+i)%N;
+      prev=(firstOut+i-1)%N;
+      if(!samples[prev].interval&&samples[idx].interval) seq=[idx];
+      else if(samples[prev].interval&&samples[idx].interval) seq.push(idx);
+      else if(samples[prev].interval&&!samples[idx].interval) break;
+    }
+    if(seq.length===0 && firstIn>=0) seq=[firstIn];
+    return build(seq,false);
   }
   function clipByRangeDistance(poly,fr,h,rangeMax){
     if(!poly||poly.length===0) return [];

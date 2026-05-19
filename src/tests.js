@@ -54,7 +54,7 @@ Tests.extra=function(ok,approx){
   var aH=Geo.rad(st4.hFov/2), aV=Geo.rad(st4.vFov/2);
   var far=10*Math.sqrt(4000*4000+3000*3000);
   var poly=Geo.footprint(fr4,aH,aV,1200,null,far); // 站
-  ok('footprint count', poly.length===240);
+  ok('footprint count', poly.length>=240);
   var A=(2400-1200)*Math.tan(aH), B=(2400-1200)*Math.tan(aV);
   var onEllipse=true;
   for(var i=0;i<poly.length;i+=20){
@@ -63,7 +63,7 @@ Tests.extra=function(ok,approx){
     if(Math.abs(val-1)>0.02) onEllipse=false;
   }
   ok('footprint ceiling ellipse@1200', onEllipse, 'pts not on expected ellipse');
-  ok('footprint empty when h>=H', Geo.footprint(fr4,aH,aV,2400,null,far).length===0);
+  ok('footprint ceiling empty at sensor plane', Geo.footprint(fr4,aH,aV,2400,null,far).length===0);
   ok('footprint rangeMax no-throw', Array.isArray(Geo.footprint(fr4,aH,aV,0,2000,far)));
   // --- Task5 clipToRoom ---
   var big=[{x:-1000,y:-1000},{x:9000,y:-1000},{x:9000,y:9000},{x:-1000,y:9000}];
@@ -87,10 +87,10 @@ Tests.extra=function(ok,approx){
   var lp=Render.layerPolys(stL);
   ok('layers 4 keys order', lp.length===4 && lp[0].h===0 && lp[3].h===1200);
   ok('layers ground filled big', lp[0].poly.length>=3);
-  var stC=State.defaults(); State.applyMount(stC,'corner'); stC.height=1000; // 站1200 > 1000 → 空
+  var stC=State.defaults(); State.applyMount(stC,'side'); stC.height=1000; stC.tilt=0; stC.hFov=90; stC.vFov=45;
   var lpc=Render.layerPolys(stC);
   var stand=lpc.filter(function(o){return o.h===1200;})[0];
-  ok('layer omitted when h>=height', stand.poly.length===0);
+  ok('side layer can exist above sensor height when FOV reaches it', stand.poly.length>=3);
   // --- Task8 boundaries ---
   var stB=State.defaults();
   var pres=Render.boundaryPoly(stB,'presence'); // @h750, rangeMax=rangePresence

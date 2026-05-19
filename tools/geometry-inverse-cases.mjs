@@ -106,7 +106,7 @@ function sampledFootprintClassification(st, h) {
       const inPoly = poly.length >= 3 && isPointInPoly(p, poly);
       const dz = h - fr.S.z;
       const dist3d = Math.sqrt((p.x - fr.S.x) ** 2 + (p.y - fr.S.y) ** 2 + dz * dz);
-      const inBeam = h < fr.S.z && pointInBeamAtHeight(fr, aH, aV, p, h, 2e-3);
+      const inBeam = pointInBeamAtHeight(fr, aH, aV, p, h, 2e-3);
       const inFiniteLayer = motionRadius !== null && inBeam && dist3d <= st.rangeMotion + 1e-6;
       tested++;
       if (inFiniteLayer) expectedInside++;

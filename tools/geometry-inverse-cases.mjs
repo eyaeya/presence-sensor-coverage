@@ -1,7 +1,10 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const sourceFiles = ['geo', 'state', 'render', 'info', 'interact'].map(name => `../src/${name}.js`);
+const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const sourceFiles = [...html.matchAll(/<script\b[^>]*\bsrc=(["'])(.*?)\1[^>]*><\/script>/g)]
+  .map(m => `../${m[2]}`)
+  .filter(file => !file.endsWith('/tests.js') && !file.endsWith('/app.js'));
 const ctx = {
   console,
   Math, Date, JSON, parseFloat, parseInt, isNaN, isFinite,
@@ -21,6 +24,21 @@ const results = [];
 
 function rad(d) { return d * Math.PI / 180; }
 function approx(a, b, eps = EPS) { return Math.abs(a - b) <= eps; }
+function rangeProjectionRadius(rangeMax, sensorHeight, targetHeight) {
+  const dz = targetHeight - sensorHeight;
+  if (rangeMax <= Math.abs(dz)) return null;
+  return Math.sqrt(rangeMax * rangeMax - dz * dz);
+}
+function pointInBeamAtHeight(fr, aH, aV, p, h, eps = 5e-4) {
+  const r = { x: p.x - fr.S.x, y: p.y - fr.S.y, z: h - fr.S.z };
+  const t = r.x * fr.d.x + r.y * fr.d.y + r.z * fr.d.z;
+  if (t <= 1e-6) return false;
+  const ru = r.x * fr.u.x + r.y * fr.u.y + r.z * fr.u.z;
+  const rv = r.x * fr.v.x + r.y * fr.v.y + r.z * fr.v.z;
+  const du = ru / (t * Math.tan(aH));
+  const dv = rv / (t * Math.tan(aV));
+  return du * du + dv * dv <= 1 + eps;
+}
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
 function baseState(mount) {
   const st = State.defaults();
@@ -71,34 +89,36 @@ function isPointInPoly(p, poly) {
   }
   return inside;
 }
-function sampledFalsePositives(st, h) {
+function sampledFootprintClassification(st, h) {
   const fr = Geo.beamFrame(st);
   const aH = Geo.rad(st.hFov / 2), aV = Geo.rad(st.vFov / 2);
   const far = 10 * Math.sqrt(st.room.W * st.room.W + st.room.D * st.room.D);
   const poly = Geo.clipToRoom(Geo.footprint(fr, aH, aV, h, null, far), st.room.W, st.room.D);
-  if (poly.length < 3) return { tested: 0, falsePositives: 0, poly };
-  const bb = bbox(poly);
-  let tested = 0, falsePositives = 0;
-  const nx = 30, ny = 22;
+  let tested = 0, falsePositives = 0, falseNegatives = 0, expectedInside = 0;
+  const nx = 36, ny = 24;
   for (let ix = 0; ix <= nx; ix++) {
     for (let iy = 0; iy <= ny; iy++) {
       const p = {
-        x: bb.x0 + (bb.x1 - bb.x0) * ix / nx,
-        y: bb.y0 + (bb.y1 - bb.y0) * iy / ny
+        x: st.room.W * (ix + 0.5) / (nx + 1),
+        y: st.room.D * (iy + 0.5) / (ny + 1)
       };
-      if (!isPointInPoly(p, poly)) continue;
+      const inPoly = poly.length >= 3 && isPointInPoly(p, poly);
+      const inBeam = h < fr.S.z && pointInBeamAtHeight(fr, aH, aV, p, h, 2e-3);
       tested++;
-      if (!Geo.inBeamAtHeight(fr, aH, aV, p, h, 2e-3)) falsePositives++;
+      if (inBeam) expectedInside++;
+      if (inPoly && !inBeam) falsePositives++;
+      if (inBeam && !inPoly) falseNegatives++;
     }
   }
-  return { tested, falsePositives, poly };
+  return { tested, expectedInside, falsePositives, falseNegatives, poly };
 }
 function boundaryStats(st, kind) {
   const h = kind === 'presence' ? 750 : 0;
   const R = kind === 'presence' ? st.rangePresence : st.rangeMotion;
   const fr = Geo.beamFrame(st);
   const aH = Geo.rad(st.hFov / 2), aV = Geo.rad(st.vFov / 2);
-  const radius = Geo.rangeProjectionRadius(R, fr.S.z, h);
+  const radius = rangeProjectionRadius(R, fr.S.z, h);
+  const geoRadius = Geo.rangeProjectionRadius(R, fr.S.z, h);
   const segs = Render.boundaryCurveSegments(st, kind);
   let count = 0, minPlan = Infinity, maxPlan = 0, maxRangeErr = 0, maxBeamErr = 0, inRoom = true, finite = true;
   for (const seg of segs) {
@@ -111,21 +131,23 @@ function boundaryStats(st, kind) {
       minPlan = Math.min(minPlan, plan);
       maxPlan = Math.max(maxPlan, plan);
       maxRangeErr = Math.max(maxRangeErr, Math.abs(Math.sqrt(dx * dx + dy * dy + dz * dz) - R));
-      const r = Geo.v3(dx, dy, dz);
-      const t = Geo.dot(r, fr.d);
-      const du = Geo.dot(r, fr.u) / (t * Math.tan(aH));
-      const dv = Geo.dot(r, fr.v) / (t * Math.tan(aV));
-      maxBeamErr = Math.max(maxBeamErr, Math.max(0, du * du + dv * dv - 1));
+      const r = { x: dx, y: dy, z: dz };
+      const t = r.x * fr.d.x + r.y * fr.d.y + r.z * fr.d.z;
+      const ru = r.x * fr.u.x + r.y * fr.u.y + r.z * fr.u.z;
+      const rv = r.x * fr.v.x + r.y * fr.v.y + r.z * fr.v.z;
+      const du = ru / (t * Math.tan(aH));
+      const dv = rv / (t * Math.tan(aV));
+      maxBeamErr = Math.max(maxBeamErr, t <= 1e-6 ? Infinity : Math.max(0, du * du + dv * dv - 1));
     }
   }
-  return { kind, h, R, radius, segments: segs.length, count, minPlan, maxPlan, maxRangeErr, maxBeamErr, inRoom, finite };
+  return { kind, h, R, radius, geoRadius, segments: segs.length, count, minPlan, maxPlan, maxRangeErr, maxBeamErr, inRoom, finite };
 }
 function highResolutionRangeSamples(st, kind, samples = 7200) {
   const h = kind === 'presence' ? 750 : 0;
   const R = kind === 'presence' ? st.rangePresence : st.rangeMotion;
   const fr = Geo.beamFrame(st);
   const aH = Geo.rad(st.hFov / 2), aV = Geo.rad(st.vFov / 2);
-  const radius = Geo.rangeProjectionRadius(R, fr.S.z, h);
+  const radius = rangeProjectionRadius(R, fr.S.z, h);
   if (radius == null) return { count: 0, longestRun: 0 };
   let count = 0, longestRun = 0, run = 0;
   for (let i = 0; i < samples * 2; i++) {
@@ -133,7 +155,7 @@ function highResolutionRangeSamples(st, kind, samples = 7200) {
     const a = 2 * Math.PI * idx / samples;
     const p = { x: fr.S.x + radius * Math.cos(a), y: fr.S.y + radius * Math.sin(a) };
     const inside = p.x >= -1e-6 && p.x <= st.room.W + 1e-6 && p.y >= -1e-6 && p.y <= st.room.D + 1e-6 &&
-      Geo.inBeamAtHeight(fr, aH, aV, p, h);
+      pointInBeamAtHeight(fr, aH, aV, p, h);
     if (i < samples && inside) count++;
     if (inside) {
       run++;
@@ -147,6 +169,7 @@ function highResolutionRangeSamples(st, kind, samples = 7200) {
 function checkBoundaries(caseName, st) {
   for (const kind of ['presence', 'motion']) {
     const stats = boundaryStats(st, kind);
+    assert(caseName, `${kind} Geo radius helper`, stats.radius === null ? stats.geoRadius === null : approx(stats.radius, stats.geoRadius, 1e-9), stats);
     if (stats.radius == null) {
       assert(caseName, `${kind} empty when R<=vertical gap`, stats.count === 0, stats);
       continue;
@@ -158,7 +181,7 @@ function checkBoundaries(caseName, st) {
       assert(caseName, `${kind} in beam`, stats.maxBeamErr <= 2e-3, stats);
     }
     const hi = highResolutionRangeSamples(st, kind);
-    assert(caseName, `${kind} low-res arc not missed`, !(hi.longestRun >= 40 && stats.count === 0), { low: stats, high: hi });
+    assert(caseName, `${kind} rendered arc not missed`, !(hi.count > 0 && stats.count === 0), { low: stats, high: hi });
   }
 }
 function checkLayers(caseName, st) {
@@ -221,17 +244,53 @@ function checkAnalyticSide(caseName, st, h) {
   if (theta <= 0) return;
   const dPlan = Geo.norm(Geo.v3(fr.d.x, fr.d.y, 0));
   const center = { x: fr.S.x + dPlan.x * delta / Math.tan(theta), y: fr.S.y + dPlan.y * delta / Math.tan(theta) };
-  assert(caseName, `analytic centerline h=${h}`, Geo.inBeamAtHeight(fr, Geo.rad(st.hFov / 2), Geo.rad(st.vFov / 2), center, h), { center });
+  assert(caseName, `analytic centerline h=${h}`, pointInBeamAtHeight(fr, Geo.rad(st.hFov / 2), Geo.rad(st.vFov / 2), center, h), { center });
+}
+function footprintPoly(st, h) {
+  const fr = Geo.beamFrame(st);
+  const far = 10 * Math.sqrt(st.room.W * st.room.W + st.room.D * st.room.D);
+  return Geo.clipToRoom(Geo.footprint(fr, Geo.rad(st.hFov / 2), Geo.rad(st.vFov / 2), h, null, far), st.room.W, st.room.D);
+}
+function checkMirrorEquivalence(caseName, a, b, mirrorPoint) {
+  for (const h of [1200, 750, 600, 0]) {
+    const pa = footprintPoly(a, h);
+    const pb = footprintPoly(b, h);
+    assert(caseName, `mirror area h=${h}`, approx(area(pa), area(pb), Math.max(2, area(pa) * 1e-5)), { areaA: area(pa), areaB: area(pb) });
+    const nx = 24, ny = 16;
+    let mismatches = 0, tested = 0;
+    for (let ix = 0; ix <= nx; ix++) {
+      for (let iy = 0; iy <= ny; iy++) {
+        const p = { x: a.room.W * (ix + 0.5) / (nx + 1), y: a.room.D * (iy + 0.5) / (ny + 1) };
+        const q = mirrorPoint(p);
+        const inA = pa.length >= 3 && isPointInPoly(p, pa);
+        const inB = pb.length >= 3 && isPointInPoly(q, pb);
+        if (inA !== inB) mismatches++;
+        tested++;
+      }
+    }
+    assert(caseName, `mirror footprint classification h=${h}`, mismatches === 0, { tested, mismatches });
+  }
+  for (const kind of ['presence', 'motion']) {
+    const sa = boundaryStats(a, kind);
+    const sb = boundaryStats(b, kind);
+    assert(caseName, `mirror ${kind} radius`, sa.radius === null ? sb.radius === null : approx(sa.radius, sb.radius, 1e-9), { sa, sb });
+    assert(caseName, `mirror ${kind} rendered count`, sa.count === sb.count, { sa, sb });
+  }
 }
 function runCase(caseName, st) {
   checkDirections(caseName, st);
   checkLayers(caseName, st);
   checkBoundaries(caseName, st);
   for (const h of [1200, 750, 600, 0]) {
-    const fp = sampledFalsePositives(st, h);
-    assert(caseName, `no sampled false positives h=${h}`, fp.falsePositives === 0, {
+    const fp = sampledFootprintClassification(st, h);
+    const allowedFalseNegatives = Math.max(2, Math.ceil(fp.expectedInside * 0.02));
+    assert(caseName, `sampled footprint matches beam h=${h}`,
+      fp.falsePositives === 0 && fp.falseNegatives <= allowedFalseNegatives, {
       tested: fp.tested,
+      expectedInside: fp.expectedInside,
       falsePositives: fp.falsePositives,
+      falseNegatives: fp.falseNegatives,
+      allowedFalseNegatives,
       bbox: bbox(fp.poly)
     });
   }
@@ -259,11 +318,18 @@ const cases = [];
 function add(name, st) { cases.push([name, st]); }
 
 for (const height of [2000, 5000]) {
-  for (const angle of [0, 90, 360]) {
+  for (const angle of [0, 90, 359, 360]) {
     for (const fovs of [[90, 45], [160, 90]]) {
-      const st = baseState('ceiling');
-      Object.assign(st, { height, hAngle: angle, hFov: fovs[0], vFov: fovs[1], rangePresence: 3000, rangeMotion: height === 5000 ? 8000 : 5000 });
-      add(`ceiling H${height} angle${angle} F${fovs[0]}/${fovs[1]}`, st);
+      for (const ranges of [[3000, 5000], [5000, 8000]]) {
+        for (const pos of [
+          ['center', { x: ROOM.W / 2, y: ROOM.D / 2 }],
+          ['near-wall', { x: 900, y: 800 }]
+        ]) {
+          const st = baseState('ceiling');
+          Object.assign(st, { sensor: clone(pos[1]), height, hAngle: angle, hFov: fovs[0], vFov: fovs[1], rangePresence: ranges[0], rangeMotion: ranges[1] });
+          add(`ceiling ${pos[0]} H${height} angle${angle} F${fovs[0]}/${fovs[1]} R${ranges[0]}/${ranges[1]}`, st);
+        }
+      }
     }
   }
 }
@@ -273,13 +339,15 @@ for (const wall of ['left', 'right', 'bottom', 'top']) {
     for (const tilt of [0, 30]) {
       for (const angle of [-90, 0, 90]) {
         for (const fovs of [[90, 45], [160, 60]]) {
-          const st = baseState('side');
-          Object.assign(st, { wall, height, tilt, hAngle: angle, hFov: fovs[0], vFov: fovs[1], rangePresence: 3000, rangeMotion: 8000 });
-          if (wall === 'left') st.sensor = { x: 0, y: ROOM.D / 2 };
-          if (wall === 'right') st.sensor = { x: ROOM.W, y: ROOM.D / 2 };
-          if (wall === 'bottom') st.sensor = { x: ROOM.W / 2, y: 0 };
-          if (wall === 'top') st.sensor = { x: ROOM.W / 2, y: ROOM.D };
-          add(`side ${wall} H${height} tilt${tilt} angle${angle} F${fovs[0]}/${fovs[1]}`, st);
+          for (const ranges of [[3000, 5000], [5000, 8000]]) {
+            const st = baseState('side');
+            Object.assign(st, { wall, height, tilt, hAngle: angle, hFov: fovs[0], vFov: fovs[1], rangePresence: ranges[0], rangeMotion: ranges[1] });
+            if (wall === 'left') st.sensor = { x: 0, y: ROOM.D / 2 };
+            if (wall === 'right') st.sensor = { x: ROOM.W, y: ROOM.D / 2 };
+            if (wall === 'bottom') st.sensor = { x: ROOM.W / 2, y: 0 };
+            if (wall === 'top') st.sensor = { x: ROOM.W / 2, y: ROOM.D };
+            add(`side ${wall} H${height} tilt${tilt} angle${angle} F${fovs[0]}/${fovs[1]} R${ranges[0]}/${ranges[1]}`, st);
+          }
         }
       }
     }
@@ -290,10 +358,12 @@ for (const corner of ['bl', 'br', 'tl', 'tr']) {
   for (const height of [1000, 2000]) {
     for (const tilt of [0, 30]) {
       for (const fovs of [[90, 45], [160, 60]]) {
-        const st = baseState('corner');
-        Object.assign(st, { corner, height, tilt, hFov: fovs[0], vFov: fovs[1], rangePresence: 3000, rangeMotion: 8000 });
-        st.sensor = { x: corner[1] === 'l' ? 0 : ROOM.W, y: corner[0] === 'b' ? 0 : ROOM.D };
-        add(`corner ${corner} H${height} tilt${tilt} F${fovs[0]}/${fovs[1]}`, st);
+        for (const ranges of [[3000, 5000], [5000, 8000]]) {
+          const st = baseState('corner');
+          Object.assign(st, { corner, height, tilt, hFov: fovs[0], vFov: fovs[1], rangePresence: ranges[0], rangeMotion: ranges[1] });
+          st.sensor = { x: corner[1] === 'l' ? 0 : ROOM.W, y: corner[0] === 'b' ? 0 : ROOM.D };
+          add(`corner ${corner} H${height} tilt${tilt} F${fovs[0]}/${fovs[1]} R${ranges[0]}/${ranges[1]}`, st);
+        }
       }
     }
   }
@@ -315,6 +385,28 @@ Object.assign(repro, {
 add('user repro bottom wall h1500', repro);
 
 for (const [name, st] of cases) runCase(name, st);
+
+const sideLeft = baseState('side');
+Object.assign(sideLeft, { wall: 'left', sensor: { x: 0, y: 4200 }, height: 1800, tilt: 20, hAngle: 35, hFov: 120, vFov: 60, rangePresence: 3000, rangeMotion: 5000 });
+const sideRight = baseState('side');
+Object.assign(sideRight, { wall: 'right', sensor: { x: ROOM.W, y: 4200 }, height: 1800, tilt: 20, hAngle: -35, hFov: 120, vFov: 60, rangePresence: 3000, rangeMotion: 5000 });
+checkMirrorEquivalence('mirror side left/right', sideLeft, sideRight, p => ({ x: ROOM.W - p.x, y: p.y }));
+
+const sideBottom = baseState('side');
+Object.assign(sideBottom, { wall: 'bottom', sensor: { x: 6100, y: 0 }, height: 1800, tilt: 20, hAngle: 35, hFov: 120, vFov: 60, rangePresence: 3000, rangeMotion: 5000 });
+const sideTop = baseState('side');
+Object.assign(sideTop, { wall: 'top', sensor: { x: 6100, y: ROOM.D }, height: 1800, tilt: 20, hAngle: -35, hFov: 120, vFov: 60, rangePresence: 3000, rangeMotion: 5000 });
+checkMirrorEquivalence('mirror side bottom/top', sideBottom, sideTop, p => ({ x: p.x, y: ROOM.D - p.y }));
+
+const cornerBL = baseState('corner');
+Object.assign(cornerBL, { corner: 'bl', sensor: { x: 0, y: 0 }, height: 1800, tilt: 20, hFov: 120, vFov: 60, rangePresence: 3000, rangeMotion: 5000 });
+const cornerBR = baseState('corner');
+Object.assign(cornerBR, { corner: 'br', sensor: { x: ROOM.W, y: 0 }, height: 1800, tilt: 20, hFov: 120, vFov: 60, rangePresence: 3000, rangeMotion: 5000 });
+checkMirrorEquivalence('mirror corner bl/br', cornerBL, cornerBR, p => ({ x: ROOM.W - p.x, y: p.y }));
+
+const cornerTL = baseState('corner');
+Object.assign(cornerTL, { corner: 'tl', sensor: { x: 0, y: ROOM.D }, height: 1800, tilt: 20, hFov: 120, vFov: 60, rangePresence: 3000, rangeMotion: 5000 });
+checkMirrorEquivalence('mirror corner bl/tl', cornerBL, cornerTL, p => ({ x: p.x, y: ROOM.D - p.y }));
 
 const report = {
   room: ROOM,

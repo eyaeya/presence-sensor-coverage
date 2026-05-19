@@ -76,21 +76,46 @@ var Render=(function(){
     var R=(kind==='presence')?st.rangePresence:st.rangeMotion;
     var radius=Geo.rangeProjectionRadius(R,fr.S.z,h);
     if(radius==null) return [];
-    var N=360, pts=[],inside=[],i,a,p;
+    var N=7200, pts=[],inside=[],i,a,p;
+    function pointAtAngle(x){
+      return {x:fr.S.x+radius*Math.cos(x),y:fr.S.y+radius*Math.sin(x)};
+    }
+    function insideAngle(x){
+      var q=pointAtAngle(x);
+      return q.x>=-1e-6&&q.x<=st.room.W+1e-6&&q.y>=-1e-6&&q.y<=st.room.D+1e-6&&inBeamAtHeight(fr,aH,aV,q,h);
+    }
+    function transitionAngle(a0,a1,wantInside){
+      var lo=a0,hi=a1,mid,k;
+      for(k=0;k<28;k++){
+        mid=(lo+hi)/2;
+        if(insideAngle(mid)===wantInside) hi=mid; else lo=mid;
+      }
+      return pointAtAngle(hi);
+    }
     for(i=0;i<N;i++){
       a=2*Math.PI*i/N;
-      p={x:fr.S.x+radius*Math.cos(a),y:fr.S.y+radius*Math.sin(a)};
+      p=pointAtAngle(a);
       pts.push(p);
-      inside.push(p.x>=-1e-6&&p.x<=st.room.W+1e-6&&p.y>=-1e-6&&p.y<=st.room.D+1e-6&&inBeamAtHeight(fr,aH,aV,p,h));
+      inside.push(insideAngle(a));
     }
     var firstOut=-1;
     for(i=0;i<N;i++){if(!inside[i]){firstOut=i;break;}}
     if(firstOut<0){pts.push(pts[0]);return [pts];}
-    var segs=[],cur=[],idx;
+    var segs=[],cur=[],idx,prev,angPrev,angCur;
     for(i=1;i<=N;i++){
       idx=(firstOut+i)%N;
-      if(inside[idx]) cur.push(pts[idx]);
-      else {if(cur.length>1)segs.push(cur);cur=[];}
+      prev=(firstOut+i-1)%N;
+      angPrev=2*Math.PI*(firstOut+i-1)/N;
+      angCur=2*Math.PI*(firstOut+i)/N;
+      if(!inside[prev]&&inside[idx]){
+        cur=[transitionAngle(angPrev,angCur,true),pts[idx]];
+      } else if(inside[prev]&&inside[idx]){
+        cur.push(pts[idx]);
+      } else if(inside[prev]&&!inside[idx]){
+        cur.push(transitionAngle(angPrev,angCur,false));
+        if(cur.length>1)segs.push(cur);
+        cur=[];
+      }
     }
     if(cur.length>1)segs.push(cur);
     return segs;

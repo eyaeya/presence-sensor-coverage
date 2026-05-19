@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>整页布局与配色实样</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,"PingFang SC",system-ui,sans-serif;background:#0f1115;color:#e6e8eb;padding:24px;line-height:1.55;}
+  .wrap{max-width:1240px;margin:0 auto;}
+  h1{font-size:20px;font-weight:600;margin-bottom:4px;}
+  .sub{color:#8b919a;font-size:13px;margin-bottom:18px;}
+  .app{border:1px solid #2a3038;border-radius:12px;overflow:hidden;display:grid;
+       grid-template-columns:1fr 280px;grid-template-rows:1fr 150px;height:560px;background:#0c0e12;}
+  .viz{position:relative;border-right:1px solid #222831;border-bottom:1px solid #222831;padding:14px;}
+  .viz .tt{position:absolute;top:10px;left:14px;font-size:11px;color:#6b7280;}
+  .info{border-bottom:1px solid #222831;padding:16px;font-size:12px;overflow:auto;background:#101319;}
+  .info h3{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin:14px 0 7px;}
+  .info h3:first-child{margin-top:0;}
+  .row{display:flex;justify-content:space-between;padding:3px 0;color:#c4ccd6;}
+  .row span:last-child{color:#fff;font-variant-numeric:tabular-nums;}
+  .tools{grid-column:1 / -1;padding:14px 18px;background:#101319;display:flex;flex-wrap:wrap;gap:14px 26px;align-items:center;}
+  .ctl{display:flex;flex-direction:column;gap:4px;min-width:120px;}
+  .ctl label{font-size:10px;color:#7b818b;text-transform:uppercase;letter-spacing:.05em;}
+  .ctl .v{font-size:12px;color:#e6e8eb;}
+  .bar{height:4px;background:#222a35;border-radius:2px;position:relative;}
+  .bar i{position:absolute;height:100%;background:#4f8cff;border-radius:2px;}
+  .bar b{position:absolute;width:11px;height:11px;border-radius:50%;background:#fff;top:-3.5px;}
+  .seg{display:flex;border:1px solid #2c3systems;border:1px solid #2c333d;border-radius:7px;overflow:hidden;}
+  .seg span{padding:5px 11px;font-size:11px;color:#9aa3af;cursor:default;}
+  .seg span.on{background:#274168;color:#fff;}
+  svg{width:100%;height:100%;display:block;}
+  .legend{display:flex;flex-wrap:wrap;gap:13px;margin-top:14px;font-size:12px;color:#aab;}
+  .legend i{display:inline-block;width:13px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px;}
+  .legend .d{width:20px;height:0;border-top-width:2px;border-top-style:dashed;}
+  .note{background:#16202b;border:1px solid #28384a;border-radius:10px;padding:14px 17px;margin-top:18px;font-size:13px;color:#bcd;}
+  .note b{color:#dceaf5;}
+  text{font-family:-apple-system,"PingFang SC",sans-serif;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>整页布局与配色实样</h1>
+  <div class="sub">三区：主可视化（最大）/ 右信息栏 / 下工具栏。配色用前面定的方案。这是静态实样，非真实计算。</div>
+
+  <div class="app">
+    <div class="viz">
+      <span class="tt">可视化区 · 顶视</span>
+      <svg viewBox="0 0 600 360" preserveAspectRatio="xMidYMid meet">
+        <rect x="70" y="40" width="460" height="280" fill="#10141b" stroke="#525a68" stroke-width="2.5"/>
+        <text x="74" y="32" fill="#6b7280" font-size="11">4000 mm</text>
+        <text x="40" y="185" fill="#6b7280" font-size="11" transform="rotate(-90 46 185)">3000 mm</text>
+        <g transform="translate(300,180)">
+          <ellipse cx="0" cy="0" rx="225" ry="138" fill="#f5d05a" fill-opacity="0.15" stroke="#f5d05a" stroke-opacity="0.4" transform="rotate(-18)"/>
+          <ellipse cx="0" cy="0" rx="172" ry="104" fill="#5fe0c0" fill-opacity="0.16" stroke="#5fe0c0" stroke-opacity="0.4" transform="rotate(-18)"/>
+          <ellipse cx="0" cy="0" rx="140" ry="84" fill="#5fb0ff" fill-opacity="0.18" stroke="#5fb0ff" stroke-opacity="0.4" transform="rotate(-18)"/>
+          <ellipse cx="0" cy="0" rx="82" ry="49" fill="#9b8cff" fill-opacity="0.24" stroke="#9b8cff" stroke-opacity="0.5" transform="rotate(-18)"/>
+          <ellipse cx="0" cy="0" rx="150" ry="92" fill="none" stroke="#4f9bff" stroke-width="2" stroke-dasharray="7 5" transform="rotate(-18)"/>
+          <ellipse cx="0" cy="0" rx="215" ry="130" fill="none" stroke="#f0913a" stroke-width="2" stroke-dasharray="7 5" transform="rotate(-18)"/>
+          <line x1="0" y1="0" x2="0" y2="-40" stroke="#aab3bf" stroke-width="1.5"/>
+          <circle cx="0" cy="0" r="5.5" fill="#fff"/>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><i style="background:#9b8cff"></i>站1200</span>
+        <span><i style="background:#5fb0ff"></i>坐750</span>
+        <span><i style="background:#5fe0c0"></i>躺600</span>
+        <span><i style="background:#f5d05a"></i>地0</span>
+        <span><i class="d" style="border-top-color:#4f9bff"></i>存在@750</span>
+        <span><i class="d" style="border-top-color:#f0913a"></i>运动@0</span>
+      </div>
+    </div>
+
+    <div class="info">
+      <h3>安装定位</h3>
+      <div class="row"><span>安装方式</span><span>吸顶安装</span></div>
+      <div class="row"><span>距上墙</span><span>1500 mm</span></div>
+      <div class="row"><span>距下墙</span><span>1500 mm</span></div>
+      <div class="row"><span>距左墙</span><span>2000 mm</span></div>
+      <div class="row"><span>距右墙</span><span>2000 mm</span></div>
+      <div class="row"><span>安装高度</span><span>2400 mm</span></div>
+      <h3>当前参数</h3>
+      <div class="row"><span>H/V FOV</span><span>160° / 90°</span></div>
+      <div class="row"><span>存在 / 运动距离</span><span>3000 / 5000</span></div>
+      <h3>鼠标位置</h3>
+      <div class="row"><span>距左 / 右墙</span><span>1820 / 2180</span></div>
+      <div class="row"><span>距上 / 下墙</span><span>970 / 2030</span></div>
+    </div>
+
+    <div class="tools">
+      <div class="ctl" style="min-width:auto;">
+        <label>安装方式</label>
+        <div class="seg"><span class="on">吸顶</span><span>侧装</span><span>墙角</span></div>
+      </div>
+      <div class="ctl"><label>房间 W / D (mm)</label><div class="v">4000 × 3000</div></div>
+      <div class="ctl"><label>安装高度 2400</label><div class="bar"><i style="width:30%"></i><b style="left:28%"></b></div></div>
+      <div class="ctl"><label>下倾角 — (吸顶禁用)</label><div class="bar" style="opacity:.35"><i style="width:0"></i><b style="left:0"></b></div></div>
+      <div class="ctl"><label>水平角 φ 0°</label><div class="bar"><i style="width:0"></i><b style="left:0"></b></div></div>
+      <div class="ctl"><label>水平 FOV 160°</label><div class="bar"><i style="width:100%"></i><b style="left:97%"></b></div></div>
+      <div class="ctl"><label>垂直 FOV 90°</label><div class="bar"><i style="width:100%"></i><b style="left:97%"></b></div></div>
+      <div class="ctl"><label>存在距离 3000</label><div class="bar"><i style="width:0"></i><b style="left:0"></b></div></div>
+      <div class="ctl"><label>运动距离 5000</label><div class="bar"><i style="width:0"></i><b style="left:0"></b></div></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>第 2 批要确认：</b> ① 布局与配色（紫站/蓝坐/青躺/黄地，蓝虚线存在/橙虚线运动）OK 吗？② 信息栏我多加了"当前参数"小节（FOV/距离速览），需要的话保留，不需要可去掉。③ 终端还有交互/边界/测试细节文字，一并看。
+  </div>
+</div>
+</body>
+</html>

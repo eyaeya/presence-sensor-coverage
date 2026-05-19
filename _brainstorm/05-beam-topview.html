@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>三种安装的顶视波束模型</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,"PingFang SC",system-ui,sans-serif;background:#0f1115;color:#e6e8eb;padding:32px;line-height:1.6;}
+  .wrap{max-width:1180px;margin:0 auto;}
+  h1{font-size:21px;font-weight:600;margin-bottom:6px;}
+  .sub{color:#8b919a;font-size:14px;margin-bottom:24px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;}
+  .card{background:#171a21;border:1px solid #262b35;border-radius:12px;padding:18px;}
+  h2{font-size:15px;font-weight:600;color:#cbd1da;margin-bottom:3px;}
+  .k{font-size:12px;color:#8b919a;margin-bottom:12px;min-height:48px;}
+  svg{width:100%;height:auto;display:block;background:#0c0e12;border-radius:8px;}
+  .pts{font-size:12px;color:#aeb6c0;margin-top:12px;padding-left:4px;}
+  .pts li{margin-bottom:5px;list-style:none;position:relative;padding-left:14px;}
+  .pts li:before{content:"›";position:absolute;left:0;color:#5a86c8;}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:22px 2px 0;font-size:12px;color:#aab;}
+  .legend i{display:inline-block;width:13px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px;}
+  .legend .d{width:20px;height:0;border-top-width:2px;border-top-style:dashed;border-radius:0;}
+  .note{background:#16202b;border:1px solid #28384a;border-radius:10px;padding:15px 18px;margin-top:22px;font-size:13px;color:#bcd;}
+  .note b{color:#dceaf5;}
+  text{font-family:-apple-system,"PingFang SC",sans-serif;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>三种安装方式 · 顶视图波束足迹模型</h1>
+  <div class="sub">每张都是房间顶视。● = 传感器；箭头 = 中轴水平投影；嵌套色块 = 4 个被检测高度的洋葱足迹（站1200 / 坐750 / 躺600 / 地0）。所有足迹都裁到房间内。</div>
+
+  <div class="grid3">
+
+    <!-- 吸顶 -->
+    <div class="card">
+      <h2>吸顶安装</h2>
+      <div class="k">中轴朝正下方。顶视足迹 = <b>以传感器正下方为圆心的同心椭圆</b>，水平角 φ 只转椭圆朝向。</div>
+      <svg viewBox="0 0 340 260">
+        <rect x="30" y="25" width="280" height="210" fill="#11151c" stroke="#4a5160" stroke-width="2"/>
+        <g transform="translate(170,130)">
+          <ellipse cx="0" cy="0" rx="135" ry="92" fill="#f5d05a" fill-opacity="0.16" stroke="#f5d05a" stroke-opacity="0.45" transform="rotate(-20)"/>
+          <ellipse cx="0" cy="0" rx="104" ry="70" fill="#5fe0c0" fill-opacity="0.16" stroke="#5fe0c0" stroke-opacity="0.45" transform="rotate(-20)"/>
+          <ellipse cx="0" cy="0" rx="86" ry="57" fill="#5fb0ff" fill-opacity="0.18" stroke="#5fb0ff" stroke-opacity="0.45" transform="rotate(-20)"/>
+          <ellipse cx="0" cy="0" rx="50" ry="33" fill="#9b8cff" fill-opacity="0.24" stroke="#9b8cff" stroke-opacity="0.55" transform="rotate(-20)"/>
+          <line x1="0" y1="0" x2="0" y2="-46" stroke="#9aa3af" stroke-width="1.5"/>
+          <polygon points="0,-46 -3,-39 3,-39" fill="#9aa3af"/>
+          <text x="5" y="-40" fill="#9aa3af" font-size="10">φ</text>
+          <circle cx="0" cy="0" r="5" fill="#fff"/>
+        </g>
+      </svg>
+      <ul class="pts">
+        <li>同心、共朝向，圆心 = 传感器 xy</li>
+        <li>h 越低圈越大（真·洋葱圈）</li>
+        <li>FOV 很大时基本铺满整屋（如实）</li>
+        <li>传感器可在屋内任意拖拽</li>
+      </ul>
+    </div>
+
+    <!-- 侧装 -->
+    <div class="card">
+      <h2>侧装</h2>
+      <div class="k">墙内法线 ±ψ 偏航 + 下倾 θ。顶视足迹 = <b>从墙上一点射入室内的扇形/瓣状区</b>，非同心。</div>
+      <svg viewBox="0 0 340 260">
+        <rect x="30" y="25" width="280" height="210" fill="#11151c" stroke="#4a5160" stroke-width="2"/>
+        <text x="14" y="135" fill="#7be0a4" font-size="10" transform="rotate(-90 20 135)">所吸附墙</text>
+        <g transform="translate(30,130)">
+          <path d="M0,0 C 70,-95 200,-78 250,-30 L255,40 C 195,80 70,92 0,0 Z" fill="#f5d05a" fill-opacity="0.15" stroke="#f5d05a" stroke-opacity="0.4"/>
+          <path d="M0,0 C 55,-72 150,-60 195,-22 L198,30 C 150,60 60,70 0,0 Z" fill="#5fe0c0" fill-opacity="0.16" stroke="#5fe0c0" stroke-opacity="0.4"/>
+          <path d="M0,0 C 45,-58 120,-48 158,-16 L160,24 C 120,48 50,56 0,0 Z" fill="#5fb0ff" fill-opacity="0.18" stroke="#5fb0ff" stroke-opacity="0.4"/>
+          <path d="M0,0 C 30,-38 78,-30 104,-9 L105,16 C 80,32 35,38 0,0 Z" fill="#9b8cff" fill-opacity="0.24" stroke="#9b8cff" stroke-opacity="0.5"/>
+          <line x1="0" y1="0" x2="70" y2="-12" stroke="#9aa3af" stroke-width="1.5"/>
+          <polygon points="70,-12 62,-15 64,-7" fill="#9aa3af"/>
+          <circle cx="0" cy="0" r="5" fill="#fff"/>
+        </g>
+      </svg>
+      <ul class="pts">
+        <li>瓣状区从墙上传感器点射入</li>
+        <li>h 越低 → 瓣更大、伸入更远</li>
+        <li>嵌套但非同心（共墙上根部）</li>
+        <li>传感器只能沿墙点击/拖拽</li>
+      </ul>
+    </div>
+
+    <!-- 墙角 -->
+    <div class="card">
+      <h2>墙角安装</h2>
+      <div class="k">沿夹角平分线 45°（固定）+ 下倾 θ。顶视足迹 = <b>从墙角沿 45° 对角线射入的瓣状区</b>。</div>
+      <svg viewBox="0 0 340 260">
+        <rect x="30" y="25" width="280" height="210" fill="#11151c" stroke="#4a5160" stroke-width="2"/>
+        <g transform="translate(30,235)">
+          <path d="M0,0 C -10,-150 -110,-235 -235,-225 C -150,-150 -150,-60 0,0 Z" fill="#f5d05a" fill-opacity="0.15" stroke="#f5d05a" stroke-opacity="0.4" transform="scale(1,1)"/>
+          <path d="M0,0 C -8,-118 -88,-186 -186,-178 C -120,-118 -118,-48 0,0 Z" fill="#5fe0c0" fill-opacity="0.16" stroke="#5fe0c0" stroke-opacity="0.4"/>
+          <path d="M0,0 C -7,-96 -72,-152 -150,-145 C -98,-96 -96,-38 0,0 Z" fill="#5fb0ff" fill-opacity="0.18" stroke="#5fb0ff" stroke-opacity="0.4"/>
+          <path d="M0,0 C -4,-60 -46,-96 -96,-92 C -62,-60 -60,-24 0,0 Z" fill="#9b8cff" fill-opacity="0.24" stroke="#9b8cff" stroke-opacity="0.5"/>
+          <line x1="0" y1="0" x2="-54" y2="-54" stroke="#9aa3af" stroke-width="1.5"/>
+          <polygon points="-54,-54 -44,-50 -50,-44" fill="#9aa3af"/>
+          <text x="-72" y="-40" fill="#9aa3af" font-size="10">45°</text>
+          <circle cx="0" cy="0" r="5" fill="#fff"/>
+        </g>
+      </svg>
+      <ul class="pts">
+        <li>瓣状区沿 45° 对角线射入</li>
+        <li>水平角固定，不可调</li>
+        <li>嵌套，共墙角根部</li>
+        <li>点击切换 4 个墙角</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <span><i style="background:#9b8cff"></i>站 1200mm</span>
+    <span><i style="background:#5fb0ff"></i>坐 750mm</span>
+    <span><i style="background:#5fe0c0"></i>躺 600mm</span>
+    <span><i style="background:#f5d05a"></i>地 0mm</span>
+    <span style="color:#8b919a">（实际还会叠加蓝/橙虚线两条探测边界，此图省略以看清足迹形态）</span>
+  </div>
+
+  <div class="note">
+    <b>请确认：</b> 吸顶 = 同心椭圆；侧装 = 墙上射入的瓣状区；墙角 = 沿 45° 对角线射入的瓣状区。三者都 "h 越低足迹越大"、都裁到房间内。瓣状形状是示意，实际由椭圆锥∩平面采样精确算出。形态对不对？
+  </div>
+</div>
+</body>
+</html>

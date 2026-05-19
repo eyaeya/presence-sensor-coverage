@@ -1,21 +1,45 @@
 import { readFileSync } from 'node:fs';
+import { URLSearchParams } from 'node:url';
 import vm from 'node:vm';
 
-const htmlPath = new URL('../index.html', import.meta.url);
-const html = readFileSync(htmlPath, 'utf8');
-const m = html.match(/<script>([\s\S]*?)<\/script>/);
-if (!m) { console.error('NO_SCRIPT_FOUND'); process.exit(2); }
-const code = m[1];
+const htmlUrl = new URL('../index.html', import.meta.url);
+const html = readFileSync(htmlUrl, 'utf8');
+const sourceFiles = [...html.matchAll(/<script\b[^>]*\bsrc=(["'])(.*?)\1[^>]*><\/script>/g)].map(m => `../${m[2]}`);
+if (sourceFiles.length === 0) {
+  console.error('NO_SCRIPT_SOURCES_FOUND');
+  process.exit(2);
+}
 
 const logs = [];
 function mkEl(tag) {
   const e = {
-    tagName: tag, id: '', className: '', innerHTML: '', textContent: '',
-    style: {}, children: [],
-    setAttribute() {}, getAttribute() { return null; },
-    addEventListener() {}, removeChild() {}, firstChild: null,
-    appendChild(c) { this.children.push(c); if (c && c.id) els[c.id] = c; return c; }
+    tagName: tag, id: '', className: '', textContent: '', _innerHTML: '',
+    style: {}, children: [], parentNode: null, attributes: {}, listeners: {}, firstChild: null,
+    setAttribute(k, v) { this.attributes[k] = String(v); if (k === 'id') { this.id = String(v); els[this.id] = this; } },
+    getAttribute(k) { return this.attributes[k] || null; },
+    addEventListener(type, cb) { (this.listeners[type] || (this.listeners[type] = [])).push(cb); },
+    dispatchEvent(ev) { (this.listeners[ev.type] || []).forEach(cb => cb.call(this, ev)); },
+    removeChild(c) {
+      this.children = this.children.filter(x => x !== c);
+      this.firstChild = this.children[0] || null;
+      return c;
+    },
+    appendChild(c) {
+      this.children.push(c);
+      this.firstChild = this.children[0] || null;
+      if (c) c.parentNode = this;
+      if (c && c.id) els[c.id] = c;
+      return c;
+    }
   };
+  Object.defineProperty(e, 'innerHTML', {
+    get() { return this._innerHTML; },
+    set(v) {
+      this._innerHTML = String(v);
+      this.children = [];
+      this.firstChild = null;
+    }
+  });
   return e;
 }
 const els = {};
@@ -28,21 +52,30 @@ const documentShim = {
     const e = mkEl(t);
     return new Proxy(e, { set(o, k, v) { o[k] = v; if (k === 'id' && v) els[v] = o; return true; } });
   },
+  createTextNode: (text) => ({ tagName: '#text', textContent: String(text), children: [] }),
   createElementNS: (_ns, t) => mkEl(t),
   body: { appendChild(c) { if (c && c.id) els[c.id] = c; return c; } },
   addEventListener: (type, cb) => { if (type === 'DOMContentLoaded') domHandlers.push(cb); }
 };
-const windowShim = { addEventListener: (type, cb) => { if (type === 'DOMContentLoaded') domHandlers.push(cb); } };
+const locationShim = { search: '?test' };
+const windowShim = {
+  addEventListener: (type, cb) => { if (type === 'DOMContentLoaded') domHandlers.push(cb); },
+  location: locationShim
+};
 const ctx = {
   window: windowShim, document: documentShim,
-  location: { search: '?test' },
+  location: locationShim,
   console: { log: (...a) => logs.push(a.join(' ')), error: (...a) => logs.push(a.join(' ')), warn: (...a) => logs.push(a.join(' ')) },
   Math, Date, JSON, parseFloat, parseInt, isNaN, isFinite,
+  URLSearchParams,
   Array, Object, String, Number, Boolean
 };
 windowShim.document = documentShim;
 vm.createContext(ctx);
-vm.runInContext(code, ctx);
+for (const file of sourceFiles) {
+  const url = new URL(file, import.meta.url);
+  vm.runInContext(readFileSync(url, 'utf8'), ctx, { filename: url.pathname });
+}
 domHandlers.forEach(h => h());
 const out = logs.join('\n');
 console.log(out);

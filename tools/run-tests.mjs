@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const htmlPath = new URL('../index.html', import.meta.url);
-const html = readFileSync(htmlPath, 'utf8');
-const m = html.match(/<script>([\s\S]*?)<\/script>/);
-if (!m) { console.error('NO_SCRIPT_FOUND'); process.exit(2); }
-const code = m[1];
+const htmlUrl = new URL('../index.html', import.meta.url);
+const html = readFileSync(htmlUrl, 'utf8');
+const sourceFiles = [...html.matchAll(/<script\s+src="([^"]+)"><\/script>/g)].map(m => `../${m[1]}`);
+if (sourceFiles.length === 0) {
+  console.error('NO_SCRIPT_SOURCES_FOUND');
+  process.exit(2);
+}
 
 const logs = [];
 function mkEl(tag) {
@@ -32,17 +34,24 @@ const documentShim = {
   body: { appendChild(c) { if (c && c.id) els[c.id] = c; return c; } },
   addEventListener: (type, cb) => { if (type === 'DOMContentLoaded') domHandlers.push(cb); }
 };
-const windowShim = { addEventListener: (type, cb) => { if (type === 'DOMContentLoaded') domHandlers.push(cb); } };
+const locationShim = { search: '?test' };
+const windowShim = {
+  addEventListener: (type, cb) => { if (type === 'DOMContentLoaded') domHandlers.push(cb); },
+  location: locationShim
+};
 const ctx = {
   window: windowShim, document: documentShim,
-  location: { search: '?test' },
+  location: locationShim,
   console: { log: (...a) => logs.push(a.join(' ')), error: (...a) => logs.push(a.join(' ')), warn: (...a) => logs.push(a.join(' ')) },
   Math, Date, JSON, parseFloat, parseInt, isNaN, isFinite,
   Array, Object, String, Number, Boolean
 };
 windowShim.document = documentShim;
 vm.createContext(ctx);
-vm.runInContext(code, ctx);
+for (const file of sourceFiles) {
+  const url = new URL(file, import.meta.url);
+  vm.runInContext(readFileSync(url, 'utf8'), ctx, { filename: url.pathname });
+}
 domHandlers.forEach(h => h());
 const out = logs.join('\n');
 console.log(out);

@@ -1,0 +1,196 @@
+/* ===== Tests ===== */
+var Tests=(function(){
+  var pass=0,fail=0,lines=[];
+  function ok(name,cond,detail){
+    if(cond){pass++;lines.push('PASS: '+name);console.log('PASS: '+name);}
+    else{fail++;lines.push('FAIL: '+name+(detail?' - '+detail:''));console.log('FAIL: '+name+(detail?' - '+detail:''));}
+  }
+  function approx(a,b,eps){return Math.abs(a-b)<=(eps||1e-6);}
+  function run(){
+    pass=0;fail=0;lines=[];
+    ok('Geo.dot', Geo.dot(Geo.v3(1,2,3),Geo.v3(4,5,6))===32);
+    var c=Geo.cross(Geo.v3(1,0,0),Geo.v3(0,1,0));
+    ok('Geo.cross', c.x===0&&c.y===0&&c.z===1);
+    ok('Geo.norm', approx(Geo.len(Geo.norm(Geo.v3(3,4,0))),1));
+    if(typeof Tests.extra==='function') Tests.extra(ok,approx);
+    var summary='TESTS: '+pass+'/'+(pass+fail)+' passed';
+    console.log(summary);
+    var el=document.getElementById('test-output');
+    if(el){el.innerHTML=lines.map(function(l){return '<div class="'+(l.indexOf('PASS')===0?'pass':'fail')+'">'+l+'</div>';}).join('')+'<div>'+summary+'</div>';}
+    return {pass:pass,fail:fail};
+  }
+  return {run:run,ok:ok};
+})();
+
+Tests.extra=function(ok,approx){
+  // --- Task2 State ---
+  var s=State.defaults();
+  ok('State.defaults ceiling', s.mount==='ceiling'&&s.height===2400&&s.hAngle===0&&s.room.W===4000&&s.room.D===3000);
+  ok('State.defaults sensor center', s.sensor.x===2000&&s.sensor.y===1500);
+  State.applyMount(s,'side');
+  ok('State side reset', s.mount==='side'&&s.height===1500&&s.hAngle===0&&s.wall==='left'&&s.sensor.x===0&&s.sensor.y===1500);
+  State.applyMount(s,'corner');
+  ok('State corner reset', s.mount==='corner'&&s.height===1800&&s.hAngle===45&&s.corner==='bl'&&s.sensor.x===0&&s.sensor.y===0);
+  State.applyMount(s,'ceiling');
+  ok('State ceiling reset', s.mount==='ceiling'&&s.height===2400&&s.sensor.x===2000&&s.sensor.y===1500);
+  // --- Task3 beamFrame ---
+  var st=State.defaults(); // ceiling,2400,phi0,center
+  var fr=Geo.beamFrame(st);
+  ok('frame ceiling S', fr.S.x===2000&&fr.S.y===1500&&fr.S.z===2400);
+  ok('frame ceiling d down', approx(fr.d.x,0)&&approx(fr.d.y,0)&&approx(fr.d.z,-1));
+  ok('frame ceiling u(phi0)=+y', approx(fr.u.x,0)&&approx(fr.u.y,1));
+  var ss=State.defaults(); State.applyMount(ss,'side'); // left wall, psi0, tilt20, h1500
+  var f2=Geo.beamFrame(ss);
+  ok('frame side S left wall', f2.S.x===0&&f2.S.y===1500&&f2.S.z===1500);
+  ok('frame side d into room +x & down', f2.d.x>0&&approx(f2.d.y,0)&&f2.d.z<0);
+  ok('frame side d tilt20', approx(f2.d.z,-Math.sin(Geo.rad(20)),1e-6));
+  ok('frame side u horizontal', approx(f2.u.z,0)&&approx(Geo.len(f2.u),1));
+  var sc=State.defaults(); State.applyMount(sc,'corner'); // bl, 45, tilt20, h1800
+  var f3=Geo.beamFrame(sc);
+  ok('frame corner bl diag', f3.d.x>0&&f3.d.y>0&&approx(f3.d.x,f3.d.y,1e-9)&&f3.d.z<0&&f3.S.x===0&&f3.S.y===0&&f3.S.z===1800);
+  // --- Task4 footprint ---
+  var st4=State.defaults(); // ceiling H2400 phi0 center, hFov160 vFov90
+  var fr4=Geo.beamFrame(st4);
+  var aH=Geo.rad(st4.hFov/2), aV=Geo.rad(st4.vFov/2);
+  var far=10*Math.sqrt(4000*4000+3000*3000);
+  var poly=Geo.footprint(fr4,aH,aV,1200,null,far); // 站
+  ok('footprint count', poly.length===240);
+  var A=(2400-1200)*Math.tan(aH), B=(2400-1200)*Math.tan(aV);
+  var onEllipse=true;
+  for(var i=0;i<poly.length;i+=20){
+    var dx=poly[i].x-2000, dy=poly[i].y-1500;
+    var val=(dy*dy)/(A*A)+(dx*dx)/(B*B);
+    if(Math.abs(val-1)>0.02) onEllipse=false;
+  }
+  ok('footprint ceiling ellipse@1200', onEllipse, 'pts not on expected ellipse');
+  ok('footprint empty when h>=H', Geo.footprint(fr4,aH,aV,2400,null,far).length===0);
+  ok('footprint rangeMax no-throw', Array.isArray(Geo.footprint(fr4,aH,aV,0,2000,far)));
+  // --- Task5 clipToRoom ---
+  var big=[{x:-1000,y:-1000},{x:9000,y:-1000},{x:9000,y:9000},{x:-1000,y:9000}];
+  var cl=Geo.clipToRoom(big,4000,3000);
+  function bbox(p){var xs=p.map(function(o){return o.x;}),ys=p.map(function(o){return o.y;});
+    return {x0:Math.min.apply(0,xs),x1:Math.max.apply(0,xs),y0:Math.min.apply(0,ys),y1:Math.max.apply(0,ys)};}
+  var bb=cl.length?bbox(cl):null;
+  ok('clip big->room rect', bb&&approx(bb.x0,0)&&approx(bb.x1,4000)&&approx(bb.y0,0)&&approx(bb.y1,3000));
+  var inside=[{x:100,y:100},{x:200,y:100},{x:200,y:200},{x:100,y:200}];
+  ok('clip inside unchanged', Geo.clipToRoom(inside,4000,3000).length===4);
+  ok('clip empty', Geo.clipToRoom([],4000,3000).length===0);
+  // --- Task6 transform ---
+  var tr=Render.makeTransform(4000,3000,800,600,30);
+  var o=tr.toPx({x:0,y:0});
+  var o2=tr.toPx({x:4000,y:3000});
+  ok('transform y-flip', o.py>o2.py, 'y0 应在屏幕下方(py更大)');
+  var rt=tr.toMm(o.px,o.py);
+  ok('transform roundtrip', approx(rt.x,0,1e-6)&&approx(rt.y,0,1e-6));
+  // --- Task7 layers ---
+  var stL=State.defaults(); // ceiling H2400
+  var lp=Render.layerPolys(stL);
+  ok('layers 4 keys order', lp.length===4 && lp[0].h===0 && lp[3].h===1200);
+  ok('layers ground filled big', lp[0].poly.length>=3);
+  var stC=State.defaults(); State.applyMount(stC,'corner'); stC.height=1000; // 站1200 > 1000 → 空
+  var lpc=Render.layerPolys(stC);
+  var stand=lpc.filter(function(o){return o.h===1200;})[0];
+  ok('layer omitted when h>=height', stand.poly.length===0);
+  // --- Task8 boundaries ---
+  var stB=State.defaults();
+  var pres=Render.boundaryPoly(stB,'presence'); // @h750, rangeMax=rangePresence
+  var moti=Render.boundaryPoly(stB,'motion');   // @h0, rangeMax=rangeMotion
+  ok('boundary presence poly', Array.isArray(pres));
+  ok('boundary motion poly', Array.isArray(moti));
+  function area(p){if(p.length<3)return 0;var s=0;for(var i=0;i<p.length;i++){var a=p[i],b=p[(i+1)%p.length];s+=a.x*b.y-b.x*a.y;}return Math.abs(s)/2;}
+  ok('motion area >= presence area', area(moti)>=area(pres));
+  // --- Task9 Info ---
+  var iC=Info.positioning(State.defaults()); // ceiling
+  var keysC=iC.map(function(r){return r.label;}).join(',');
+  ok('info ceiling fields', /安装方式/.test(keysC)&&/距上墙/.test(keysC)&&/距左墙/.test(keysC)&&/安装高度/.test(keysC));
+  var sS=State.defaults();State.applyMount(sS,'side');
+  var iS=Info.positioning(sS).map(function(r){return r.label;}).join(',');
+  ok('info side fields', /下倾角/.test(iS)&&/安装高度/.test(iS)&&!/距左墙/.test(iS));
+  var sC=State.defaults();State.applyMount(sC,'corner');
+  var iCo=Info.positioning(sC).map(function(r){return r.label;}).join(',');
+  ok('info corner no-dist', /下倾角/.test(iCo)&&!/距/.test(iCo.replace('安装方式','')));
+  var hv=Info.hover(State.defaults(),{x:1820,y:970});
+  ok('info hover dists', hv.left===1820&&hv.right===2180&&hv.bottom===970&&hv.top===2030);
+  ok('info hover outside room null', Info.hover(State.defaults(),{x:-1,y:970})===null&&Info.hover(State.defaults(),{x:1820,y:3001})===null);
+  // --- Task10 clamp ---
+  ok('clamp lo', Interact.clamp(50,100,200)===100);
+  ok('clamp hi', Interact.clamp(999,100,200)===200);
+  ok('clamp NaN→fallback', Interact.clamp(NaN,100,200,150)===150);
+  ok('clamp ok', Interact.clamp(123,100,200)===123);
+  // --- Task11 placement ---
+  var W=4000,D=3000;
+  ok('nearestWall left', Interact.nearestWall({x:50,y:1500},W,D)==='left');
+  ok('nearestWall top', Interact.nearestWall({x:2000,y:2950},W,D)==='top');
+  ok('nearestCorner br', Interact.nearestCorner({x:3900,y:80},W,D)==='br');
+  var stP=State.defaults();State.applyMount(stP,'side'); // left wall
+  Interact.placeSensor(stP,{x:1234,y:2222}); // side: 锁左墙→x=0,y=clamp
+  ok('place side on wall', stP.sensor.x===0 && stP.sensor.y===2222);
+  var stC=State.defaults();State.applyMount(stC,'ceiling');
+  Interact.placeSensor(stC,{x:-100,y:5000}); // ceiling: clamp 进房间
+  ok('place ceiling clamp', stC.sensor.x===0 && stC.sensor.y===3000);
+  var stK=State.defaults();State.applyMount(stK,'corner');
+  Interact.placeSensor(stK,{x:3950,y:2950}); // 最近角 tr
+  ok('place corner snap tr', stK.corner==='tr' && stK.sensor.x===4000 && stK.sensor.y===3000);
+  // --- Task12 hardening ---
+  function polyArea(p){if(!p||p.length<3)return 0;var s=0;for(var i=0;i<p.length;i++){var a=p[i],b=p[(i+1)%p.length];s+=a.x*b.y-b.x*a.y;}return Math.abs(s)/2;}
+  function gval(rows,lab){for(var i=0;i<rows.length;i++){if(rows[i].label===lab)return rows[i].value;}return null;}
+  var cP=State.defaults();cP.hAngle=90;var fcp=Geo.beamFrame(cP);
+  ok('frame ceiling phi90', approx(fcp.u.x,1)&&approx(fcp.u.y,0)&&approx(fcp.v.x,0)&&approx(fcp.v.y,-1));
+  var sf=State.defaults();State.applyMount(sf,'side');var fsf=Geo.beamFrame(sf);
+  ok('frame side orthonormal', approx(Geo.dot(fsf.u,fsf.v),0)&&approx(Geo.dot(fsf.u,fsf.d),0)&&approx(Geo.dot(fsf.v,fsf.d),0)&&approx(Geo.len(fsf.u),1)&&approx(Geo.len(fsf.v),1)&&approx(Geo.len(fsf.d),1));
+  var cf=State.defaults();State.applyMount(cf,'corner');var fcf=Geo.beamFrame(cf);
+  ok('frame corner orthonormal', approx(Geo.dot(fcf.u,fcf.v),0)&&approx(Geo.dot(fcf.u,fcf.d),0)&&approx(Geo.dot(fcf.v,fcf.d),0)&&approx(Geo.len(fcf.u),1)&&approx(Geo.len(fcf.v),1)&&approx(Geo.len(fcf.d),1));
+  var aL=Render.layerPolys(State.defaults());
+  ok('layers nested area', polyArea(aL[0].poly)>=polyArea(aL[1].poly)&&polyArea(aL[1].poly)>=polyArea(aL[2].poly)&&polyArea(aL[2].poly)>=polyArea(aL[3].poly));
+  var inRoom=true;for(var li=0;li<aL.length;li++){var pp=aL[li].poly;for(var pj=0;pj<pp.length;pj++){if(pp[pj].x<-1e-6||pp[pj].x>4000+1e-6||pp[pj].y<-1e-6||pp[pj].y>3000+1e-6)inRoom=false;}}
+  ok('layers within room', inRoom);
+  var bS=State.defaults();bS.hFov=90;bS.vFov=45;bS.rangePresence=3000;bS.rangeMotion=8000;
+  ok('boundary motion > presence strict', polyArea(Render.boundaryPoly(bS,'motion'))>polyArea(Render.boundaryPoly(bS,'presence')));
+  var ceilingTooFar=State.defaults();ceilingTooFar.height=5000;ceilingTooFar.rangePresence=3000;
+  ok('boundary ceiling beyond axial range empty', Render.boundaryPoly(ceilingTooFar,'presence').length===0);
+  function maxPlanDistance(poly,st){var m=0;for(var i=0;i<poly.length;i++){var dx=poly[i].x-st.sensor.x,dy=poly[i].y-st.sensor.y,d=Math.sqrt(dx*dx+dy*dy);if(d>m)m=d;}return m;}
+  var sideRange=State.defaults();State.applyMount(sideRange,'side');
+  sideRange.room={W:7000,D:5000};sideRange.sensor={x:0,y:2500};sideRange.height=1800;sideRange.tilt=20;sideRange.hAngle=0;sideRange.hFov=160;sideRange.vFov=60;sideRange.rangePresence=3000;sideRange.rangeMotion=5000;
+  ok('side presence boundary respects 3d range h1800', maxPlanDistance(Render.boundaryPoly(sideRange,'presence'),sideRange)<=Math.sqrt(3000*3000-(1800-750)*(1800-750))+5);
+  ok('side motion boundary respects 3d range h1800', maxPlanDistance(Render.boundaryPoly(sideRange,'motion'),sideRange)<=Math.sqrt(5000*5000-1800*1800)+5);
+  var sideBottom=State.defaults();State.applyMount(sideBottom,'side');
+  sideBottom.room={W:7000,D:5000};sideBottom.wall='bottom';sideBottom.sensor={x:5829.1370308716705,y:0};sideBottom.height=1500;sideBottom.tilt=20;sideBottom.hAngle=0;sideBottom.hFov=160;sideBottom.vFov=60;sideBottom.rangePresence=3000;sideBottom.rangeMotion=5000;
+  ok('side bottom presence boundary respects 3d range h1500', maxPlanDistance(Render.boundaryPoly(sideBottom,'presence'),sideBottom)<=Math.sqrt(3000*3000-(1500-750)*(1500-750))+5);
+  function curveDistanceStats(segs,st){var min=Infinity,max=0,c=0;for(var si=0;si<segs.length;si++){for(var pi=0;pi<segs[si].length;pi++){var dx=segs[si][pi].x-st.sensor.x,dy=segs[si][pi].y-st.sensor.y,d=Math.sqrt(dx*dx+dy*dy);if(d<min)min=d;if(d>max)max=d;c++;}}return {min:min,max:max,count:c};}
+  var sideBottomLimit=Math.sqrt(3000*3000-(1500-750)*(1500-750));
+  var sideBottomCurveOk=false;
+  if(typeof Render.boundaryCurveSegments==='function'){
+    var sideBottomCurve=curveDistanceStats(Render.boundaryCurveSegments(sideBottom,'presence'),sideBottom);
+    sideBottomCurveOk=sideBottomCurve.count>8&&sideBottomCurve.min>=sideBottomLimit-5&&sideBottomCurve.max<=sideBottomLimit+5;
+  }
+  ok('side bottom presence boundary draws range arc only', sideBottomCurveOk);
+  var sideRangeCurveOk=false;
+  if(typeof Render.boundaryCurveSegments==='function'){
+    var sideRangePresence=curveDistanceStats(Render.boundaryCurveSegments(sideRange,'presence'),sideRange);
+    var sideRangeMotion=curveDistanceStats(Render.boundaryCurveSegments(sideRange,'motion'),sideRange);
+    sideRangeCurveOk=sideRangePresence.count>8&&sideRangeMotion.count>8&&
+      sideRangePresence.min>=Math.sqrt(3000*3000-(1800-750)*(1800-750))-5&&
+      sideRangePresence.max<=Math.sqrt(3000*3000-(1800-750)*(1800-750))+5&&
+      sideRangeMotion.min>=Math.sqrt(5000*5000-1800*1800)-5&&
+      sideRangeMotion.max<=Math.sqrt(5000*5000-1800*1800)+5;
+  }
+  ok('side left boundary arcs match 3d range h1800', sideRangeCurveOk);
+  var pcv=Info.positioning(State.defaults());
+  ok('info ceiling values', gval(pcv,'距上墙')==='1500 mm'&&gval(pcv,'距左墙')==='2000 mm');
+  var psv=State.defaults();State.applyMount(psv,'side');var psr=Info.positioning(psv);
+  ok('info side end values', gval(psr,'距墙一端')==='1500 mm'&&gval(psr,'距墙另一端')==='1500 mm');
+  ok('info params', gval(Info.params(State.defaults()),'H / V FOV')==='160° / 90°');
+  var pcc=State.defaults();State.applyMount(pcc,'corner');
+  ok('info corner exact labels', Info.positioning(pcc).map(function(r){return r.label;}).join(',')==='安装方式,安装高度,下倾角度');
+  ok('clamp default lo', Interact.clamp(NaN,1,9)===1);
+  ok('clamp empty string', Interact.clamp('',1,9)===1);
+  ok('nearestWall right', Interact.nearestWall({x:3950,y:1500},4000,3000)==='right');
+  ok('nearestWall bottom', Interact.nearestWall({x:2000,y:50},4000,3000)==='bottom');
+  var rs=State.defaults();State.applyMount(rs,'side');Interact.relocateSideWall(rs,{x:3990,y:1000});
+  ok('relocateSideWall right', rs.wall==='right'&&rs.sensor.x===4000&&rs.sensor.y===1000);
+  var i2=State.defaults();State.applyMount(i2,'corner');i2.corner='br';i2.sensor={x:i2.room.W,y:0};i2.room.W=20000;Interact.resnapRoom(i2);
+  ok('resnap corner preserved on grow', i2.corner==='br'&&i2.sensor.x===20000&&i2.sensor.y===0);
+  var sea=State.defaults();State.applyMount(sea,'side');sea.sensor={x:0,y:500};var sear=Info.positioning(sea);
+  function seav(rows,lab){for(var i=0;i<rows.length;i++){if(rows[i].label===lab)return rows[i].value;}return null;}
+  ok('info side end values asym', seav(sear,'距墙一端')==='500 mm'&&seav(sear,'距墙另一端')==='2500 mm');
+};

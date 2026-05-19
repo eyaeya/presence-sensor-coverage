@@ -13,12 +13,33 @@ if (sourceFiles.length === 0) {
 const logs = [];
 function mkEl(tag) {
   const e = {
-    tagName: tag, id: '', className: '', innerHTML: '', textContent: '',
-    style: {}, children: [],
-    setAttribute() {}, getAttribute() { return null; },
-    addEventListener() {}, removeChild() {}, firstChild: null,
-    appendChild(c) { this.children.push(c); if (c && c.id) els[c.id] = c; return c; }
+    tagName: tag, id: '', className: '', textContent: '', _innerHTML: '',
+    style: {}, children: [], parentNode: null, attributes: {}, listeners: {}, firstChild: null,
+    setAttribute(k, v) { this.attributes[k] = String(v); if (k === 'id') { this.id = String(v); els[this.id] = this; } },
+    getAttribute(k) { return this.attributes[k] || null; },
+    addEventListener(type, cb) { (this.listeners[type] || (this.listeners[type] = [])).push(cb); },
+    dispatchEvent(ev) { (this.listeners[ev.type] || []).forEach(cb => cb.call(this, ev)); },
+    removeChild(c) {
+      this.children = this.children.filter(x => x !== c);
+      this.firstChild = this.children[0] || null;
+      return c;
+    },
+    appendChild(c) {
+      this.children.push(c);
+      this.firstChild = this.children[0] || null;
+      if (c) c.parentNode = this;
+      if (c && c.id) els[c.id] = c;
+      return c;
+    }
   };
+  Object.defineProperty(e, 'innerHTML', {
+    get() { return this._innerHTML; },
+    set(v) {
+      this._innerHTML = String(v);
+      this.children = [];
+      this.firstChild = null;
+    }
+  });
   return e;
 }
 const els = {};
@@ -31,6 +52,7 @@ const documentShim = {
     const e = mkEl(t);
     return new Proxy(e, { set(o, k, v) { o[k] = v; if (k === 'id' && v) els[v] = o; return true; } });
   },
+  createTextNode: (text) => ({ tagName: '#text', textContent: String(text), children: [] }),
   createElementNS: (_ns, t) => mkEl(t),
   body: { appendChild(c) { if (c && c.id) els[c.id] = c; return c; } },
   addEventListener: (type, cb) => { if (type === 'DOMContentLoaded') domHandlers.push(cb); }

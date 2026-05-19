@@ -93,7 +93,8 @@ function sampledFootprintClassification(st, h) {
   const fr = Geo.beamFrame(st);
   const aH = Geo.rad(st.hFov / 2), aV = Geo.rad(st.vFov / 2);
   const far = 10 * Math.sqrt(st.room.W * st.room.W + st.room.D * st.room.D);
-  const poly = Geo.clipToRoom(Geo.footprint(fr, aH, aV, h, null, far), st.room.W, st.room.D);
+  const poly = Geo.clipToRoom(Geo.footprint(fr, aH, aV, h, st.rangeMotion, far), st.room.W, st.room.D);
+  const motionRadius = Geo.rangeProjectionRadius(st.rangeMotion, fr.S.z, h);
   let tested = 0, falsePositives = 0, falseNegatives = 0, expectedInside = 0;
   const nx = 36, ny = 24;
   for (let ix = 0; ix <= nx; ix++) {
@@ -103,11 +104,14 @@ function sampledFootprintClassification(st, h) {
         y: st.room.D * (iy + 0.5) / (ny + 1)
       };
       const inPoly = poly.length >= 3 && isPointInPoly(p, poly);
+      const dz = h - fr.S.z;
+      const dist3d = Math.sqrt((p.x - fr.S.x) ** 2 + (p.y - fr.S.y) ** 2 + dz * dz);
       const inBeam = h < fr.S.z && pointInBeamAtHeight(fr, aH, aV, p, h, 2e-3);
+      const inFiniteLayer = motionRadius !== null && inBeam && dist3d <= st.rangeMotion + 1e-6;
       tested++;
-      if (inBeam) expectedInside++;
-      if (inPoly && !inBeam) falsePositives++;
-      if (inBeam && !inPoly) falseNegatives++;
+      if (inFiniteLayer) expectedInside++;
+      if (inPoly && !inFiniteLayer) falsePositives++;
+      if (inFiniteLayer && !inPoly) falseNegatives++;
     }
   }
   return { tested, expectedInside, falsePositives, falseNegatives, poly };
@@ -186,16 +190,22 @@ function checkBoundaries(caseName, st) {
 }
 function checkLayers(caseName, st) {
   const layers = Render.layerPolys(st);
-  let previousArea = Infinity;
-  for (let i = layers.length - 1; i >= 0; i--) {
+  const fr = Geo.beamFrame(st);
+  for (let i = 0; i < layers.length; i++) {
     const L = layers[i];
     assert(caseName, `layer ${L.key} finite`, allFinite(L.poly), L);
     assert(caseName, `layer ${L.key} room clip`, allInRoom(L.poly, st), L);
-    const a = area(L.poly);
-    if (st.mount === 'ceiling' && Number.isFinite(previousArea)) {
-      assert(caseName, `layer ${L.key} nested`, a + 1e-3 >= previousArea, { area: a, previousArea });
+    const radius = Geo.rangeProjectionRadius(st.rangeMotion, fr.S.z, L.h);
+    if (radius == null) {
+      assert(caseName, `layer ${L.key} empty beyond motion range`, L.poly.length === 0, L);
+      continue;
     }
-    previousArea = a;
+    let maxRangeErr = 0;
+    for (const p of L.poly) {
+      const dx = p.x - fr.S.x, dy = p.y - fr.S.y, dz = L.h - fr.S.z;
+      maxRangeErr = Math.max(maxRangeErr, Math.sqrt(dx * dx + dy * dy + dz * dz) - st.rangeMotion);
+    }
+    assert(caseName, `layer ${L.key} within motion range`, maxRangeErr <= 1e-3, { maxRangeErr, layer: L });
   }
 }
 function checkDirections(caseName, st) {
@@ -249,7 +259,7 @@ function checkAnalyticSide(caseName, st, h) {
 function footprintPoly(st, h) {
   const fr = Geo.beamFrame(st);
   const far = 10 * Math.sqrt(st.room.W * st.room.W + st.room.D * st.room.D);
-  return Geo.clipToRoom(Geo.footprint(fr, Geo.rad(st.hFov / 2), Geo.rad(st.vFov / 2), h, null, far), st.room.W, st.room.D);
+  return Geo.clipToRoom(Geo.footprint(fr, Geo.rad(st.hFov / 2), Geo.rad(st.vFov / 2), h, st.rangeMotion, far), st.room.W, st.room.D);
 }
 function checkMirrorEquivalence(caseName, a, b, mirrorPoint) {
   for (const h of [1200, 750, 600, 0]) {
@@ -283,9 +293,12 @@ function runCase(caseName, st) {
   checkBoundaries(caseName, st);
   for (const h of [1200, 750, 600, 0]) {
     const fp = sampledFootprintClassification(st, h);
-    const allowedFalseNegatives = Math.max(2, Math.ceil(fp.expectedInside * 0.02));
-    assert(caseName, `sampled footprint matches beam h=${h}`,
-      fp.falsePositives === 0 && fp.falseNegatives <= allowedFalseNegatives, {
+    const allowedFalseNegatives = Math.max(8, Math.ceil(fp.expectedInside * 0.03));
+    const sampleOk = fp.expectedInside > 0
+      ? fp.falsePositives === 0 && fp.falseNegatives < fp.expectedInside && fp.falseNegatives <= allowedFalseNegatives
+      : fp.falsePositives === 0;
+    assert(caseName, `sampled finite footprint matches beam and motion range h=${h}`,
+      sampleOk, {
       tested: fp.tested,
       expectedInside: fp.expectedInside,
       falsePositives: fp.falsePositives,

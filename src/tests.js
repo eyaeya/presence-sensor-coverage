@@ -149,6 +149,7 @@ Tests.extra=function(ok,approx){
   var ceilingTooFar=State.defaults();ceilingTooFar.height=5000;ceilingTooFar.rangePresence=3000;
   ok('boundary ceiling beyond axial range empty', Render.boundaryPoly(ceilingTooFar,'presence').length===0);
   function maxPlanDistance(poly,st){var m=0;for(var i=0;i<poly.length;i++){var dx=poly[i].x-st.sensor.x,dy=poly[i].y-st.sensor.y,d=Math.sqrt(dx*dx+dy*dy);if(d>m)m=d;}return m;}
+  function max3dDistance(poly,fr,h){var m=0;for(var i=0;i<poly.length;i++){var dx=poly[i].x-fr.S.x,dy=poly[i].y-fr.S.y,dz=h-fr.S.z,d=Math.sqrt(dx*dx+dy*dy+dz*dz);if(d>m)m=d;}return m;}
   var sideRange=State.defaults();State.applyMount(sideRange,'side');
   sideRange.room={W:7000,D:5000};sideRange.sensor={x:0,y:2500};sideRange.height=1800;sideRange.tilt=20;sideRange.hAngle=0;sideRange.hFov=160;sideRange.vFov=60;sideRange.rangePresence=3000;sideRange.rangeMotion=5000;
   ok('side presence boundary respects 3d range h1800', maxPlanDistance(Render.boundaryPoly(sideRange,'presence'),sideRange)<=Math.sqrt(3000*3000-(1800-750)*(1800-750))+5);
@@ -204,4 +205,68 @@ Tests.extra=function(ok,approx){
   var invSegStats=curveDistanceStats(Render.boundaryCurveSegments(invSide,'presence'),invSide);
   var invLimit=Geo.rangeProjectionRadius(3000,1500,750);
   ok('side left 15000x10000 presence arc radius', invSegStats.count>8&&invSegStats.min>=invLimit-5&&invSegStats.max<=invLimit+5);
+  var finiteSide=State.defaults();State.applyMount(finiteSide,'side');
+  finiteSide.room={W:15000,D:10000};finiteSide.wall='left';finiteSide.sensor={x:0,y:5000};
+  finiteSide.height=1500;finiteSide.tilt=20;finiteSide.hAngle=0;finiteSide.hFov=160;finiteSide.vFov=90;finiteSide.rangeMotion=3000;
+  var finiteLayers=Render.layerPolys(finiteSide),finiteFr=Geo.beamFrame(finiteSide),finiteOk=true;
+  for(var fl=0;fl<finiteLayers.length;fl++){
+    if(max3dDistance(finiteLayers[fl].poly,finiteFr,finiteLayers[fl].h)>finiteSide.rangeMotion+5) finiteOk=false;
+  }
+  ok('layers respect motion 3d range', finiteOk);
+  var noLayer=State.defaults();noLayer.height=5000;noLayer.rangeMotion=3000;
+  var noLayers=Render.layerPolys(noLayer),allEmpty=true;
+  for(var nl=0;nl<noLayers.length;nl++){if(noLayers[nl].poly.length!==0) allEmpty=false;}
+  ok('layers empty when motion range below vertical gap', allEmpty);
+  var nearRange=State.defaults();State.applyMount(nearRange,'side');
+  nearRange.room={W:15000,D:10000};nearRange.wall='left';nearRange.sensor={x:0,y:5000};
+  nearRange.height=1500;nearRange.tilt=20;nearRange.hAngle=0;nearRange.hFov=120;nearRange.vFov=60;nearRange.rangeMotion=3000;
+  var farRange=JSON.parse(JSON.stringify(nearRange));farRange.rangeMotion=8000;
+  ok('layer area grows with motion range', polyArea(Render.layerPolys(farRange)[0].poly)>polyArea(Render.layerPolys(nearRange)[0].poly)*1.5);
+  if(typeof Render.renderLegend==='function'){
+    Render.renderLegend();Render.renderLegend();
+    var leg=document.getElementById('legend');
+    ok('legend renders six fixed items once', leg&&leg.children&&leg.children.length===6);
+  } else {
+    ok('legend renders six fixed items once', false);
+  }
+  var oldTools=document.getElementById('tools');
+  if(oldTools){
+    oldTools.innerHTML='';
+    var editState=State.defaults(),changes=0;
+    Interact.init(editState,function(){changes++;});
+    function desc(root,pred,out){out=out||[];if(!root||!root.children)return out;for(var di=0;di<root.children.length;di++){var ch=root.children[di];if(pred(ch))out.push(ch);desc(ch,pred,out);}return out;}
+    function ctlByLabel(root,text){var all=desc(root,function(e){return (e.className||'').indexOf('ctl')>=0;});for(var ci=0;ci<all.length;ci++){var labs=desc(all[ci],function(e){return (e.tagName||'').toLowerCase()==='label';});if(labs.length&&labs[0].textContent.indexOf(text)>=0)return all[ci];}return null;}
+    function inputByType(root,type){var all=desc(root,function(e){return (e.tagName||'').toLowerCase()==='input'&&e.type===type;});return all[0]||null;}
+    function inputsByType(root,type){return desc(root,function(e){return (e.tagName||'').toLowerCase()==='input'&&e.type===type;});}
+    var groups=desc(oldTools,function(e){return e.className==='tool-group-title';}).map(function(e){return e.textContent;}).join(',');
+    ok('tool groups render categories', groups==='空间,安装,视场,距离');
+    var hCtl=ctlByLabel(oldTools,'水平 FOV'),hNum=hCtl?inputByType(hCtl,'number'):null;
+    if(hNum&&typeof hNum.dispatchEvent==='function'){
+      hNum.value='';hNum.dispatchEvent({type:'input'});
+      ok('number input allows temporary empty value', hNum.value===''&&editState.hFov===160&&changes===0);
+      hNum.value='120';hNum.dispatchEvent({type:'input'});
+      ok('number input updates valid typed value', hNum.value==='120'&&editState.hFov===120&&changes===1);
+    } else {
+      ok('number input test harness available', false);
+    }
+    var roomCtlNode=ctlByLabel(oldTools,'房间 W / D'),roomNums=roomCtlNode?inputsByType(roomCtlNode,'number'):[];
+    if(roomNums.length>=2){
+      roomNums[0].value='';roomNums[0].dispatchEvent({type:'input'});
+      ok('room width input allows temporary empty value', roomNums[0].value===''&&editState.room.W===4000);
+      roomNums[0].value='15000';roomNums[0].dispatchEvent({type:'input'});
+      ok('room width input updates valid typed value', roomNums[0].value==='15000'&&editState.room.W===15000);
+      roomNums[1].value='2';roomNums[1].dispatchEvent({type:'input'});
+      ok('room depth partial below min does not clamp while typing', roomNums[1].value==='2'&&editState.room.D===3000);
+      roomNums[1].dispatchEvent({type:'blur'});
+      ok('room depth blur clamps below min', String(roomNums[1].value)==='1000'&&editState.room.D===1000);
+    } else {
+      ok('room input test harness available', false);
+    }
+    Info.render(editState,null);
+    var infoBox=document.getElementById('info');
+    var hasMini=desc(infoBox,function(e){return e.className&&e.className.indexOf('mini-room')>=0;}).length===1;
+    var hasChips=desc(infoBox,function(e){return e.className==='chip';}).length===4;
+    var hasHover=desc(infoBox,function(e){return e.className==='hover-grid';}).length===1;
+    ok('info graphic blocks render', hasMini&&hasChips&&hasHover);
+  }
 };

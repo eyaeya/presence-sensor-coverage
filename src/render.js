@@ -11,6 +11,25 @@ var Render=(function(){
   function el(tag,attr){var e=document.createElementNS(SVGNS,tag);for(var k in attr)e.setAttribute(k,attr[k]);return e;}
   var svg,tr;
   function init(){svg=document.getElementById('svg');}
+  function renderLegend(){
+    var box=document.getElementById('legend');
+    if(!box) return;
+    while(box.firstChild) box.removeChild(box.firstChild);
+    box.innerHTML='';
+    [
+      {t:'地 0mm',c:'#f5d05a'},
+      {t:'躺 600mm',c:'#5fe0c0'},
+      {t:'坐 750mm',c:'#5fb0ff'},
+      {t:'站 1200mm',c:'#9b8cff'},
+      {t:'存在边界',c:'#4f9bff',d:1},
+      {t:'运动边界',c:'#f0913a',d:1}
+    ].forEach(function(item){
+      var span=document.createElement('span');
+      var i=document.createElement('i');i.style.background=item.d?'transparent':item.c;i.style.borderColor=item.c;
+      if(item.d){i.className='d';i.style.borderTopColor=item.c;}
+      span.appendChild(i);span.appendChild(document.createTextNode(item.t));box.appendChild(span);
+    });
+  }
   function currentTransform(){return tr;}
   function draw(st){
     var r=svg.getBoundingClientRect();
@@ -28,6 +47,8 @@ var Render=(function(){
     drawLayers(st);
     drawBoundaries(st);
     drawSensor(st);
+    var legend=document.getElementById('legend');
+    if(legend&&!legend.firstChild) renderLegend();
   }
   var LAYERS=[{key:'ground',h:0,color:'#f5d05a'},{key:'lie',h:600,color:'#5fe0c0'},
               {key:'sit',h:750,color:'#5fb0ff'},{key:'stand',h:1200,color:'#9b8cff'}];
@@ -36,7 +57,7 @@ var Render=(function(){
     var aH=Geo.rad(st.hFov/2), aV=Geo.rad(st.vFov/2);
     var far=10*Math.sqrt(st.room.W*st.room.W+st.room.D*st.room.D);
     return LAYERS.map(function(L){
-      var poly=Geo.footprint(fr,aH,aV,L.h,null,far);
+      var poly=Geo.footprint(fr,aH,aV,L.h,st.rangeMotion,far);
       return {key:L.key,h:L.h,color:L.color,poly:Geo.clipToRoom(poly,st.room.W,st.room.D)};
     });
   }
@@ -143,5 +164,5 @@ var Render=(function(){
     svg.appendChild(el('line',{x1:c.px,y1:c.py,x2:tip.px,y2:tip.py,stroke:'#aab3bf','stroke-width':1.5}));
     svg.appendChild(el('circle',{id:'sensorDot',cx:c.px,cy:c.py,r:6,fill:'#fff'}));
   }
-  return {makeTransform:makeTransform,init:init,draw:draw,currentTransform:currentTransform,_el:el,SVGNS:SVGNS,layerPolys:layerPolys,boundaryPoly:boundaryPoly,boundaryCurveSegments:boundaryCurveSegments,drawSensor:drawSensor};
+  return {makeTransform:makeTransform,init:init,draw:draw,currentTransform:currentTransform,_el:el,SVGNS:SVGNS,layerPolys:layerPolys,boundaryPoly:boundaryPoly,boundaryCurveSegments:boundaryCurveSegments,drawSensor:drawSensor,renderLegend:renderLegend};
 })();

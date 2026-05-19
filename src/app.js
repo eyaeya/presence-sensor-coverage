@@ -1,6 +1,7 @@
 /* ===== 引导 ===== */
 window.addEventListener('DOMContentLoaded',function(){
-  if(location.search.indexOf('test')>=0){
+  var isTest=(new URLSearchParams(location.search)).has('test');
+  if(isTest){
     document.getElementById('app').style.display='none';
     var pre=document.createElement('pre');pre.id='test-output';document.body.appendChild(pre);
     Tests.run();

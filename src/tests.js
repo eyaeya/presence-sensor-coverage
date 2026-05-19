@@ -193,4 +193,15 @@ Tests.extra=function(ok,approx){
   var sea=State.defaults();State.applyMount(sea,'side');sea.sensor={x:0,y:500};var sear=Info.positioning(sea);
   function seav(rows,lab){for(var i=0;i<rows.length;i++){if(rows[i].label===lab)return rows[i].value;}return null;}
   ok('info side end values asym', seav(sear,'距墙一端')==='500 mm'&&seav(sear,'距墙另一端')==='2500 mm');
+  // --- 2026-05-20 inverse geometry ---
+  ok('range radius 3d projection h1800 presence', approx(Geo.rangeProjectionRadius(3000,1800,750),Math.sqrt(3000*3000-1050*1050),1e-9));
+  ok('range radius empty when vertical gap exceeds range', Geo.rangeProjectionRadius(3000,5000,750)===null);
+  var invSide=State.defaults();State.applyMount(invSide,'side');
+  invSide.room={W:15000,D:10000};invSide.sensor={x:0,y:5000};invSide.height=1500;invSide.tilt=20;invSide.hAngle=0;invSide.hFov=160;invSide.vFov=60;
+  var invFr=Geo.beamFrame(invSide);
+  var invCenter={x:(1500-750)/Math.tan(Geo.rad(20)),y:5000};
+  ok('side left centerline inverse formula in beam', Geo.inBeamAtHeight(invFr,Geo.rad(80),Geo.rad(30),invCenter,750));
+  var invSegStats=curveDistanceStats(Render.boundaryCurveSegments(invSide,'presence'),invSide);
+  var invLimit=Geo.rangeProjectionRadius(3000,1500,750);
+  ok('side left 15000x10000 presence arc radius', invSegStats.count>8&&invSegStats.min>=invLimit-5&&invSegStats.max<=invLimit+5);
 };

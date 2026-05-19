@@ -67,21 +67,16 @@ var Render=(function(){
     return Geo.clipToRoom(Geo.footprint(fr,aH,aV,h,R,far),st.room.W,st.room.D);
   }
   function inBeamAtHeight(fr,aH,aV,p,h){
-    var r=Geo.v3(p.x-fr.S.x,p.y-fr.S.y,h-fr.S.z);
-    var t=Geo.dot(r,fr.d);
-    if(t<=1e-6) return false;
-    var du=Geo.dot(r,fr.u)/(t*Math.tan(aH));
-    var dv=Geo.dot(r,fr.v)/(t*Math.tan(aV));
-    return du*du+dv*dv<=1.0005;
+    return Geo.inBeamAtHeight(fr,aH,aV,p,h);
   }
   function boundaryCurveSegments(st,kind){
     var fr=Geo.beamFrame(st);
     var aH=Geo.rad(st.hFov/2), aV=Geo.rad(st.vFov/2);
     var h=(kind==='presence')?750:0;
     var R=(kind==='presence')?st.rangePresence:st.rangeMotion;
-    var dz=h-fr.S.z;
-    if(R<=Math.abs(dz)) return [];
-    var radius=Math.sqrt(R*R-dz*dz), N=360, pts=[],inside=[],i,a,p;
+    var radius=Geo.rangeProjectionRadius(R,fr.S.z,h);
+    if(radius==null) return [];
+    var N=360, pts=[],inside=[],i,a,p;
     for(i=0;i<N;i++){
       a=2*Math.PI*i/N;
       p={x:fr.S.x+radius*Math.cos(a),y:fr.S.y+radius*Math.sin(a)};

@@ -9,6 +9,11 @@ var Geo=(function(){
   function len(a){return Math.sqrt(a.x*a.x+a.y*a.y+a.z*a.z);}
   function norm(a){var L=len(a)||1;return {x:a.x/L,y:a.y/L,z:a.z/L};}
   function rad(d){return d*Math.PI/180;}
+  function rangeProjectionRadius(rangeMax,sensorHeight,targetHeight){
+    var dz=targetHeight-sensorHeight;
+    if(rangeMax<=Math.abs(dz)) return null;
+    return Math.sqrt(rangeMax*rangeMax-dz*dz);
+  }
   function beamFrame(st){
     var H=st.height;
     if(st.mount==='ceiling'){
@@ -58,9 +63,17 @@ var Geo=(function(){
   }
   function clipByRangeDistance(poly,fr,h,rangeMax){
     if(!poly||poly.length===0) return [];
-    var dz=h-fr.S.z;
-    if(rangeMax<=Math.abs(dz)) return [];
-    return clipToCircle(poly,fr.S.x,fr.S.y,Math.sqrt(rangeMax*rangeMax-dz*dz),240);
+    var radius=rangeProjectionRadius(rangeMax,fr.S.z,h);
+    if(radius==null) return [];
+    return clipToCircle(poly,fr.S.x,fr.S.y,radius,240);
+  }
+  function inBeamAtHeight(fr,aH,aV,p,h,eps){
+    var r=v3(p.x-fr.S.x,p.y-fr.S.y,h-fr.S.z);
+    var t=dot(r,fr.d);
+    if(t<=1e-6) return false;
+    var du=dot(r,fr.u)/(t*Math.tan(aH));
+    var dv=dot(r,fr.v)/(t*Math.tan(aV));
+    return du*du+dv*dv<=1+(eps==null?5e-4:eps);
   }
   function clipToCircle(poly,cx,cy,r,N){
     var clip=[],i,a;
@@ -114,5 +127,5 @@ var Geo=(function(){
     }
     return out;
   }
-  return {v3:v3,add:add,sub:sub,scale:scale,dot:dot,cross:cross,len:len,norm:norm,rad:rad,beamFrame:beamFrame,footprint:footprint,clipByRangeDistance:clipByRangeDistance,clipToRoom:clipToRoom};
+  return {v3:v3,add:add,sub:sub,scale:scale,dot:dot,cross:cross,len:len,norm:norm,rad:rad,rangeProjectionRadius:rangeProjectionRadius,beamFrame:beamFrame,footprint:footprint,clipByRangeDistance:clipByRangeDistance,inBeamAtHeight:inBeamAtHeight,clipToRoom:clipToRoom};
 })();

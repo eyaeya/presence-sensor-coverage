@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
+import { URLSearchParams } from 'node:url';
 import vm from 'node:vm';
 
 const htmlUrl = new URL('../index.html', import.meta.url);
 const html = readFileSync(htmlUrl, 'utf8');
-const sourceFiles = [...html.matchAll(/<script\s+src="([^"]+)"><\/script>/g)].map(m => `../${m[1]}`);
+const sourceFiles = [...html.matchAll(/<script\b[^>]*\bsrc=(["'])(.*?)\1[^>]*><\/script>/g)].map(m => `../${m[2]}`);
 if (sourceFiles.length === 0) {
   console.error('NO_SCRIPT_SOURCES_FOUND');
   process.exit(2);
@@ -44,6 +45,7 @@ const ctx = {
   location: locationShim,
   console: { log: (...a) => logs.push(a.join(' ')), error: (...a) => logs.push(a.join(' ')), warn: (...a) => logs.push(a.join(' ')) },
   Math, Date, JSON, parseFloat, parseInt, isNaN, isFinite,
+  URLSearchParams,
   Array, Object, String, Number, Boolean
 };
 windowShim.document = documentShim;

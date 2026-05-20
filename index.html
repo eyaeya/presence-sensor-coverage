@@ -65,13 +65,13 @@
   .seg{display:flex;border:1px solid #2c333d;border-radius:7px;overflow:hidden;}
   .seg button{padding:6px 12px;font-size:12px;color:#9aa3af;background:none;border:none;cursor:pointer;}
   .seg button.on{background:#274168;color:#fff;}
-  .preset-container{display:flex;flex-direction:column;gap:6px;min-width:170px;}
-  .preset-row{display:flex;align-items:center;gap:8px;}
-  .preset-name{flex:1;font-size:12px;color:#c4ccd6;white-space:nowrap;}
-  .preset-variants{display:flex;gap:4px;}
-  .preset-btn{padding:4px 9px;font-size:12px;color:#9aa3af;background:#0c0e12;border:1px solid #2c333d;border-radius:5px;cursor:pointer;}
-  .preset-btn.on{background:#274168;color:#fff;border-color:#3a5a89;}
-  .preset-btn:hover{color:#e6e8eb;}
+  .preset-container{display:flex;flex-direction:column;gap:6px;min-width:200px;}
+  .preset-row1{display:flex;gap:6px;align-items:center;}
+  .preset-select{flex:1;background:#0c0e12;border:1px solid #2c333d;color:#e6e8eb;border-radius:5px;padding:4px 6px;font-size:12px;}
+  .preset-apply{padding:4px 12px;font-size:12px;color:#fff;background:#274168;border:1px solid #3a5a89;border-radius:5px;cursor:pointer;}
+  .preset-apply:hover{background:#2f4d7c;}
+  .preset-current{font-size:11px;color:#9aa3af;font-variant-numeric:tabular-nums;}
+  .preset-current span{color:#e6e8eb;}
   @media (max-width: 860px){
     #app{grid-template-columns:1fr;grid-template-rows:minmax(320px,1fr) auto 210px;}
     #viz{border-right:0;}

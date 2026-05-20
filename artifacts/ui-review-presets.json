@@ -1,0 +1,71 @@
+{
+  "generatedAt": "2026-05-20T19:27:00+08:00",
+  "method": "Chrome via superpowers-chrome MCP, file:// load (sandbox blocks HTTP and file:// via Playwright MCP)",
+  "viewport": {"width": 1440, "height": 900},
+  "baseline": "TESTS 101/101 passed at commit 6c6cd80",
+  "scenarios": [
+    {
+      "name": "xiaomi-pro-ceiling",
+      "btnIndex": 2,
+      "expected": {
+        "mount": "ceiling",
+        "hFov": 110, "vFov": 60,
+        "rangePresence": 4000, "rangeMotion": 7000,
+        "height": 2400, "tilt": 0,
+        "activeBtn": 2,
+        "infoWidth": 240,
+        "toolGroupCount": 5,
+        "toolGroupTitles": ["空间","安装","视场","距离","传感器预设"],
+        "presetButtonsCount": 5,
+        "hoverCompassExists": true,
+        "coverageDotsCount": 4,
+        "hoverCellsAtCenter": ["↑1500 mm","←2000 mm","→2000 mm","↓1500 mm",""],
+        "coverageDotsAtCenter": ["on","on","on","on"]
+      },
+      "actual": {
+        "mount": "ceiling",
+        "hFov": 110, "vFov": 60,
+        "rangePresence": 4000, "rangeMotion": 7000,
+        "height": 2400, "tilt": 0,
+        "activeBtn": 2,
+        "infoWidth": 240,
+        "toolGroupCount": 5,
+        "toolGroupTitles": ["空间","安装","视场","距离","传感器预设"],
+        "presetButtonsCount": 5,
+        "hoverCompassExists": true,
+        "coverageDotsCount": 4,
+        "hoverCellsAtCenter": ["↑1500 mm","←2000 mm","→2000 mm","↓1500 mm",""],
+        "coverageDotsAtCenter": ["on","on","on","on"]
+      },
+      "screenshot": "output/playwright/ui-review-pro-ceiling.png",
+      "result": "pass"
+    },
+    {
+      "name": "ziqing-trio-side",
+      "btnIndex": 0,
+      "expected": {
+        "mount": "side",
+        "hFov": 160, "vFov": 90,
+        "rangePresence": 6000, "rangeMotion": 7000,
+        "height": 1500, "tilt": 0,
+        "wall": "left", "sensorX": 0, "sensorY": 1500,
+        "activeBtn": 0,
+        "hoverCellsAtCenter": ["↑1500 mm","←2000 mm","→2000 mm","↓1500 mm",""],
+        "coverageDotsAtCenter": ["on","on","on","on"]
+      },
+      "actual": {
+        "mount": "side",
+        "hFov": 160, "vFov": 90,
+        "rangePresence": 6000, "rangeMotion": 7000,
+        "height": 1500, "tilt": 0,
+        "wall": "left", "sensorX": 0, "sensorY": 1500,
+        "activeBtn": 0,
+        "hoverCellsAtCenter": ["↑1500 mm","←2000 mm","→2000 mm","↓1500 mm",""],
+        "coverageDotsAtCenter": ["on","on","on","on"]
+      },
+      "screenshot": "output/playwright/ui-review-trio-side.png",
+      "result": "pass"
+    }
+  ],
+  "failures": []
+}

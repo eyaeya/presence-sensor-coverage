@@ -266,7 +266,7 @@ Tests.extra=function(ok,approx){
     var infoBox=document.getElementById('info');
     var hasMini=desc(infoBox,function(e){return e.className&&e.className.indexOf('mini-room')>=0;}).length===1;
     var hasChips=desc(infoBox,function(e){return e.className==='chip';}).length===4;
-    var hasHover=desc(infoBox,function(e){return e.className==='hover-grid';}).length===1;
+    var hasHover=desc(infoBox,function(e){return e.className==='hover-compass';}).length===1;
     ok('info graphic blocks render', hasMini&&hasChips&&hasHover);
   }
   // --- UI Review Task1 range extension ---

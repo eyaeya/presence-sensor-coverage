@@ -61,12 +61,55 @@ var Info=(function(){
     });
     box.appendChild(chips);
   }
-  function addHoverGrid(box,hv){
-    var grid=document.createElement('div');grid.className='hover-grid';
-    var vals=hv?[
-      ['上',hv.top],['左',hv.left],['右',hv.right],['下',hv.bottom]
-    ]:[['上','—'],['左','—'],['右','—'],['下','—']];
-    vals.forEach(function(p){var d=document.createElement('div');d.innerHTML='<b>'+p[0]+'</b><span>'+(p[1]==='—'?'—':p[1]+' mm')+'</span>';grid.appendChild(d);});
+  function addHoverCompass(box,st,hv){
+    var grid=document.createElement('div');grid.className='hover-compass';
+    function cell(klass,label,val){
+      var c=document.createElement('div');c.className='hc-cell '+klass;
+      if(label){var l=document.createElement('span');l.className='hc-label';l.textContent=label;c.appendChild(l);}
+      var v=document.createElement('span');v.textContent=val;c.appendChild(v);
+      return c;
+    }
+    if(hv){
+      grid.appendChild(cell('hc-top','↑',hv.top+' mm'));
+      grid.appendChild(cell('hc-left','←',hv.left+' mm'));
+      grid.appendChild(cell('hc-right','→',hv.right+' mm'));
+      grid.appendChild(cell('hc-bottom','↓',hv.bottom+' mm'));
+    } else {
+      grid.appendChild(cell('hc-top','↑','—'));
+      grid.appendChild(cell('hc-left','←','—'));
+      grid.appendChild(cell('hc-right','→','—'));
+      grid.appendChild(cell('hc-bottom','↓','—'));
+    }
+    var mini=document.createElement('div');mini.className='hc-cell hc-center';
+    var inner=document.createElement('div');inner.className='hc-mini';
+    if(hv){
+      var cur=document.createElement('i');cur.className='hc-cursor';
+      cur.style.left=(hv.left/st.room.W*100)+'%';
+      cur.style.bottom=(hv.bottom/st.room.D*100)+'%';
+      inner.appendChild(cur);
+    }
+    mini.appendChild(inner);
+    grid.appendChild(mini);
+    box.appendChild(grid);
+  }
+  function addCoverageGrid(box,st,hv){
+    var grid=document.createElement('div');grid.className='coverage';
+    var cv=hv ? coverage(st, {x:hv.left, y:hv.bottom}) : {stand:false,sit:false,lie:false,ground:false};
+    var items=[
+      {key:'stand',  label:'站', h:1200, color:'#9b8cff'},
+      {key:'sit',    label:'坐', h: 750, color:'#5fb0ff'},
+      {key:'lie',    label:'躺', h: 600, color:'#5fe0c0'},
+      {key:'ground', label:'地', h:   0, color:'#f5d05a'}
+    ];
+    items.forEach(function(it){
+      var item=document.createElement('div');item.className='cv-item';
+      var dot=document.createElement('span');dot.className='cv-dot'+(cv[it.key]?'':' off');
+      dot.style.borderColor=it.color;dot.style.background=cv[it.key]?it.color:'transparent';
+      var label=document.createElement('span');label.className='cv-label';label.textContent=it.label;
+      var h=document.createElement('span');h.className='cv-h';h.textContent=it.h+'mm';
+      item.appendChild(dot);item.appendChild(label);item.appendChild(h);
+      grid.appendChild(item);
+    });
     box.appendChild(grid);
   }
   function render(st,hv){
@@ -80,7 +123,9 @@ var Info=(function(){
     addMetricChips(box,st);
     sec('当前参数',params(st));
     title('鼠标位置');
-    addHoverGrid(box,hv);
+    addHoverCompass(box,st,hv);
+    title('覆盖区');
+    addCoverageGrid(box,st,hv);
   }
   return {positioning:positioning,params:params,hover:hover,coverage:coverage,render:render};
 })();

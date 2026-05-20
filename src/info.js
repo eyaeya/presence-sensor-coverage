@@ -31,6 +31,21 @@ var Info=(function(){
     return {left:Math.round(mm.x),right:Math.round(st.room.W-mm.x),
       bottom:Math.round(mm.y),top:Math.round(st.room.D-mm.y)};
   }
+  function coverage(st, mm){
+    var result={stand:false, sit:false, lie:false, ground:false};
+    if(!mm||mm.x<0||mm.x>st.room.W||mm.y<0||mm.y>st.room.D) return result;
+    var fr=Geo.beamFrame(st);
+    var aH=Geo.rad(st.hFov/2), aV=Geo.rad(st.vFov/2);
+    var HEIGHTS={stand:1200, sit:750, lie:600, ground:0};
+    for(var key in HEIGHTS){
+      var h=HEIGHTS[key];
+      if(!Geo.inBeamAtHeight(fr,aH,aV,mm,h)) continue;
+      var dx=mm.x-fr.S.x, dy=mm.y-fr.S.y, dz=h-fr.S.z;
+      var dist3D=Math.sqrt(dx*dx+dy*dy+dz*dz);
+      if(dist3D<=st.rangeMotion) result[key]=true;
+    }
+    return result;
+  }
   function addMountGlyph(box,st){
     var g=document.createElement('div');g.className='mini-room';
     var dot=document.createElement('i');
@@ -69,5 +84,5 @@ var Info=(function(){
     title('鼠标位置');
     addHoverGrid(box,hv);
   }
-  return {positioning:positioning,params:params,hover:hover,render:render};
+  return {positioning:positioning,params:params,hover:hover,coverage:coverage,render:render};
 })();

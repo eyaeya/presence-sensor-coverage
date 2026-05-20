@@ -296,4 +296,16 @@ Tests.extra=function(ok,approx){
     var rpNum=findNumInputByLabel('存在距离');
     ok('rangePresence num input max=6000', rpNum&&Number(rpNum.max)===6000);
   })();
+  // --- UI Review Task3 Info.coverage ---
+  (function(){
+    var st=State.defaults();
+    var cv=Info.coverage(st, {x:st.room.W/2, y:st.room.D/2});
+    ok('coverage center all true', cv.stand===true&&cv.sit===true&&cv.lie===true&&cv.ground===true);
+    var cvN=Info.coverage(st, null);
+    ok('coverage null all false', cvN.stand===false&&cvN.sit===false&&cvN.lie===false&&cvN.ground===false);
+    var cvOut=Info.coverage(st, {x:-100, y:0});
+    ok('coverage outside room all false', cvOut.stand===false&&cvOut.sit===false&&cvOut.lie===false&&cvOut.ground===false);
+    ok('coverage corner stand actual', Info.coverage(st, {x:0,y:0}).stand===false);
+    ok('coverage corner ground actual', Info.coverage(st, {x:0,y:0}).ground===true);
+  })();
 };

@@ -383,18 +383,15 @@ Tests.extra=function(ok,approx){
       return p&&p.variants.filter(function(v){return v.mount===mount;})[0];
     }
     Interact.applyPreset(stU, variantOf('ziqing-lite','ceiling'));
-    var presContainers=[];
     function findByClass(el,cls){var out=[];if(!el||!el.children)return out;if((el.className||'').indexOf(cls)>=0)out.push(el);for(var i=0;i<el.children.length;i++)out=out.concat(findByClass(el.children[i],cls));return out;}
-    presContainers=findByClass(toolsBox,'preset-current');
-    var curCont=presContainers.length>0?presContainers[0]:null;
-    var curSpan=curCont&&curCont.children?curCont.children[1]:null;
+    function spanOf(curCont){if(!curCont||!curCont.children)return null;for(var i=0;i<curCont.children.length;i++){if((curCont.children[i].tagName||'').toLowerCase()==='span')return curCont.children[i];}return null;}
+    var curCont=findByClass(toolsBox,'preset-current')[0]||null;
+    var curSpan=spanOf(curCont);
     ok('preset-current after apply lite ceiling', curSpan&&curSpan.textContent==='子擎 Lite / 顶装');
     stU.hFov=99;
     Interact.init(stU,function(){});
-    presContainers=[];
-    presContainers=findByClass(document.getElementById('tools'),'preset-current');
-    var curCont2=presContainers.length>0?presContainers[0]:null;
-    var curSpan2=curCont2&&curCont2.children?curCont2.children[1]:null;
+    var curCont2=findByClass(document.getElementById('tools'),'preset-current')[0]||null;
+    var curSpan2=spanOf(curCont2);
     ok('preset-current dash when no match', curSpan2&&curSpan2.textContent==='—');
   })();
 };

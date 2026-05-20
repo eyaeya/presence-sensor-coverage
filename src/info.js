@@ -36,14 +36,12 @@ var Info=(function(){
     if(!mm||mm.x<0||mm.x>st.room.W||mm.y<0||mm.y>st.room.D) return result;
     var fr=Geo.beamFrame(st);
     var aH=Geo.rad(st.hFov/2), aV=Geo.rad(st.vFov/2);
-    var HEIGHTS={stand:1200, sit:750, lie:600, ground:0};
-    for(var key in HEIGHTS){
-      var h=HEIGHTS[key];
-      if(!Geo.inBeamAtHeight(fr,aH,aV,mm,h)) continue;
-      var dx=mm.x-fr.S.x, dy=mm.y-fr.S.y, dz=h-fr.S.z;
+    Render.LAYERS.forEach(function(L){
+      if(!Geo.inBeamAtHeight(fr,aH,aV,mm,L.h)) return;
+      var dx=mm.x-fr.S.x, dy=mm.y-fr.S.y, dz=L.h-fr.S.z;
       var dist3D=Math.sqrt(dx*dx+dy*dy+dz*dz);
-      if(dist3D<=st.rangeMotion) result[key]=true;
-    }
+      if(dist3D<=st.rangeMotion) result[L.key]=true;
+    });
     return result;
   }
   function addMountGlyph(box,st){

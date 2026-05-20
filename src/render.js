@@ -164,5 +164,5 @@ var Render=(function(){
     svg.appendChild(el('line',{x1:c.px,y1:c.py,x2:tip.px,y2:tip.py,stroke:'#aab3bf','stroke-width':1.5}));
     svg.appendChild(el('circle',{id:'sensorDot',cx:c.px,cy:c.py,r:6,fill:'#fff'}));
   }
-  return {makeTransform:makeTransform,init:init,draw:draw,currentTransform:currentTransform,_el:el,SVGNS:SVGNS,layerPolys:layerPolys,boundaryPoly:boundaryPoly,boundaryCurveSegments:boundaryCurveSegments,drawSensor:drawSensor,renderLegend:renderLegend};
+  return {makeTransform:makeTransform,init:init,draw:draw,currentTransform:currentTransform,_el:el,SVGNS:SVGNS,LAYERS:LAYERS,layerPolys:layerPolys,boundaryPoly:boundaryPoly,boundaryCurveSegments:boundaryCurveSegments,drawSensor:drawSensor,renderLegend:renderLegend};
 })();

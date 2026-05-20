@@ -79,8 +79,8 @@ var Interact=(function(){
     }
     group('空间',[seg(),roomCtl()]);
     group('安装',[hRange(),num('下倾角 (0-30°)','tilt',0,30,1, st.mount==='ceiling'),hAngleCtl()]);
-    group('视场',[num('水平 FOV (90-160°)','hFov',90,160,1,false),num('垂直 FOV (45-90°)','vFov',45,90,1,false)]);
-    group('距离',[num('存在距离 (3000-5000)','rangePresence',3000,5000,50,false),num('运动距离 (5000-8000)','rangeMotion',5000,8000,50,false)]);
+    group('视场',[num('水平 FOV (90-160°)','hFov',90,160,1,false),num('垂直 FOV (45-160°)','vFov',45,160,1,false)]);
+    group('距离',[num('存在距离 (3000-6000)','rangePresence',3000,6000,50,false),num('运动距离 (5000-8000)','rangeMotion',5000,8000,50,false)]);
   }
   function init(state,cb){st=state;onChange=cb;rebuild();}
   function nearestWall(mm,W,D){

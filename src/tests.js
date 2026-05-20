@@ -269,4 +269,31 @@ Tests.extra=function(ok,approx){
     var hasHover=desc(infoBox,function(e){return e.className==='hover-grid';}).length===1;
     ok('info graphic blocks render', hasMini&&hasChips&&hasHover);
   }
+  // --- UI Review Task1 range extension ---
+  ok('Interact.clamp vFov 160 within 45-160', Interact.clamp(160,45,160,90)===160);
+  ok('Interact.clamp rangePresence 6000 within 3000-6000', Interact.clamp(6000,3000,6000,3000)===6000);
+  (function(){
+    var stTmp=State.defaults();
+    Interact.init(stTmp,function(){});
+    function findNumInputByLabel(text){
+      var groups=document.getElementById('tools').children;
+      for(var i=0;i<groups.length;i++){
+        var body=groups[i].children[1];
+        if(!body||!body.children) continue;
+        for(var j=0;j<body.children.length;j++){
+          var ctl=body.children[j];
+          var label=ctl.children&&ctl.children[0];
+          if(label&&label.textContent&&label.textContent.indexOf(text)===0){
+            var rowi=ctl.children[1];
+            return rowi&&rowi.children&&rowi.children[0];
+          }
+        }
+      }
+      return null;
+    }
+    var vfovNum=findNumInputByLabel('垂直 FOV');
+    ok('vFov num input max=160', vfovNum&&Number(vfovNum.max)===160);
+    var rpNum=findNumInputByLabel('存在距离');
+    ok('rangePresence num input max=6000', rpNum&&Number(rpNum.max)===6000);
+  })();
 };

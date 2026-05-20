@@ -343,4 +343,26 @@ Tests.extra=function(ok,approx){
     s.hFov=111;
     ok('variant no match after tweak', !Interact.variantMatchesState(s, variantOf('xiaomi-pro','ceiling')));
   })();
+  (function(){
+    function variantOf(id,mount){
+      var p=window.SensorPresets.filter(function(x){return x.id===id;})[0];
+      return p&&p.variants.filter(function(v){return v.mount===mount;})[0];
+    }
+    var s;
+    var v1=variantOf('ziqing-lite','ceiling');
+    s=State.defaults(); if(v1)Interact.applyPreset(s, v1);
+    ok('preset lite ceiling',
+      v1&&s.mount==='ceiling'&&s.hFov===130&&s.vFov===130&&s.rangePresence===4000&&s.rangeMotion===8000&&s.height===2400&&s.tilt===0);
+    var v2=variantOf('ziqing-lite','side');
+    s=State.defaults(); if(v2)Interact.applyPreset(s, v2);
+    ok('preset lite side',
+      v2&&s.mount==='side'&&s.hFov===130&&s.vFov===130&&s.rangePresence===4000&&s.rangeMotion===8000&&s.height===1500&&s.tilt===0);
+    var v3=variantOf('xiaomi-body-2s','side');
+    s=State.defaults(); if(v3)Interact.applyPreset(s, v3);
+    ok('preset 2s side height 200',
+      v3&&s.mount==='side'&&s.hFov===130&&s.vFov===130&&s.rangePresence===3000&&s.rangeMotion===8000&&s.height===200&&s.tilt===0);
+    var v4=variantOf('xiaomi-body-2s','side');
+    s=State.defaults(); if(v4)Interact.applyPreset(s, v4);
+    ok('apply 2s preserves height 200', v4&&s.height===200);
+  })();
 };

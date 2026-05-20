@@ -35,5 +35,26 @@ window.SensorPresets = [
         hFov: 110, vFov: 60,  rangePresence: 4000, rangeMotion: 7000,
         height: 1500, tilt: 0 }
     ]
+  },
+  {
+    id: "ziqing-lite",
+    name: "子擎 Lite",
+    variants: [
+      { mount: "ceiling", label: "吸顶",
+        hFov: 130, vFov: 130, rangePresence: 4000, rangeMotion: 8000,
+        tilt: 0 },
+      { mount: "side",    label: "侧装",
+        hFov: 130, vFov: 130, rangePresence: 4000, rangeMotion: 8000,
+        tilt: 0 }
+    ]
+  },
+  {
+    id: "xiaomi-body-2s",
+    name: "小米人体 2S",
+    variants: [
+      { mount: "side",    label: "侧装",
+        hFov: 130, vFov: 130, rangePresence: 3000, rangeMotion: 8000,
+        height: 200, tilt: 0 }
+    ]
   }
 ];

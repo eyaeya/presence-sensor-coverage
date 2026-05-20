@@ -1,4 +1,28 @@
+# ===== macOS / 编辑器 =====
 .DS_Store
+*.swp
+.idea/
+.vscode/
+
+# ===== Claude / worktrees / 本地代理工具 =====
+.claude/
 .worktrees/
 worktrees/
-artifacts/geometry-inverse-results.json
+
+# ===== 草稿与中间制品（不进发布）=====
+_brainstorm/
+artifacts/
+output/
+
+# ===== 浏览器自动化缓存 =====
+.playwright-mcp/
+.playwright-cli/
+
+# ===== 依赖与构建（保留以备未来）=====
+node_modules/
+dist/
+.cache/
+
+# ===== 日志 =====
+*.log
+npm-debug.log*

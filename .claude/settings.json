@@ -1,8 +1,0 @@
-{
-  "sandbox": {
-    "enabled": true,
-    "filesystem": {
-      "allowWrite": ["./", "./.git"]
-    }
-  }
-}

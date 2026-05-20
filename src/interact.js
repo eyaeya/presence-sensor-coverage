@@ -83,6 +83,30 @@ var Interact=(function(){
     group('距离',[num('存在距离 (3000-6000)','rangePresence',3000,6000,50,false),num('运动距离 (5000-8000)','rangeMotion',5000,8000,50,false)]);
   }
   function init(state,cb){st=state;onChange=cb;rebuild();}
+  function applyPreset(state, variant){
+    State.applyMount(state, variant.mount);
+    state.tilt=0; // default tilt for all mounts
+    if(variant.hFov          != null) state.hFov          = clamp(variant.hFov,          90,   160);
+    if(variant.vFov          != null) state.vFov          = clamp(variant.vFov,          45,   160);
+    if(variant.rangePresence != null) state.rangePresence = clamp(variant.rangePresence, 3000, 6000);
+    if(variant.rangeMotion   != null) state.rangeMotion   = clamp(variant.rangeMotion,   5000, 8000);
+    if(variant.height        != null){
+      var lim = {ceiling:[2000,5000], side:[1000,2000], corner:[1000,2000]}[state.mount];
+      state.height = clamp(variant.height, lim[0], lim[1]);
+    }
+    if(variant.tilt          != null) state.tilt          = clamp(variant.tilt,          0,    30);
+    if(st===state && typeof onChange==='function'){ rebuild(); onChange(); }
+  }
+  function variantMatchesState(state, v){
+    if(state.mount !== v.mount) return false;
+    if(v.hFov          != null && state.hFov          !== v.hFov)          return false;
+    if(v.vFov          != null && state.vFov          !== v.vFov)          return false;
+    if(v.rangePresence != null && state.rangePresence !== v.rangePresence) return false;
+    if(v.rangeMotion   != null && state.rangeMotion   !== v.rangeMotion)   return false;
+    if(v.height        != null && state.height        !== v.height)        return false;
+    if(v.tilt          != null && state.tilt          !== v.tilt)          return false;
+    return true;
+  }
   function nearestWall(mm,W,D){
     var d={left:mm.x,right:W-mm.x,bottom:mm.y,top:D-mm.y},best='left',bv=d.left;
     for(var k in d){if(d[k]<bv){bv=d[k];best=k;}}return best;
@@ -111,5 +135,5 @@ var Interact=(function(){
     if(st.mount==='side'){ placeSensor(st,{x:st.sensor.x,y:st.sensor.y}); }
     else if(st.mount==='corner'){ st.sensor={x:(st.corner[1]==='l'?0:st.room.W),y:(st.corner[0]==='b'?0:st.room.D)}; }
   }
-  return {clamp:clamp,init:init,nearestWall:nearestWall,nearestCorner:nearestCorner,placeSensor:placeSensor,relocateSideWall:relocateSideWall,resnapRoom:resnapRoom};
+  return {clamp:clamp,init:init,nearestWall:nearestWall,nearestCorner:nearestCorner,placeSensor:placeSensor,relocateSideWall:relocateSideWall,resnapRoom:resnapRoom,applyPreset:applyPreset,variantMatchesState:variantMatchesState};
 })();

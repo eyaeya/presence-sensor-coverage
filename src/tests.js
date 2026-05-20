@@ -308,4 +308,37 @@ Tests.extra=function(ok,approx){
     ok('coverage corner stand actual', Info.coverage(st, {x:0,y:0}).stand===false);
     ok('coverage corner ground actual', Info.coverage(st, {x:0,y:0}).ground===true);
   })();
+  // --- UI Review Task4 applyPreset + variantMatchesState ---
+  (function(){
+    function variantOf(id,mount){
+      var p=window.SensorPresets.filter(function(x){return x.id===id;})[0];
+      return p.variants.filter(function(v){return v.mount===mount;})[0];
+    }
+    var s;
+    s=State.defaults();
+    Interact.applyPreset(s, variantOf('ziqing-trio','side'));
+    ok('preset trio side all fields',
+      s.mount==='side'&&s.hFov===160&&s.vFov===90&&s.rangePresence===6000&&s.rangeMotion===7000&&s.height===1500&&s.tilt===0);
+    s=State.defaults();
+    Interact.applyPreset(s, variantOf('ziqing-celling','ceiling'));
+    ok('preset celling ceiling defaults height',
+      s.mount==='ceiling'&&s.vFov===160&&s.hFov===160&&s.rangePresence===4000&&s.rangeMotion===5500&&s.height===2400);
+    s=State.defaults();
+    Interact.applyPreset(s, variantOf('xiaomi-pro','ceiling'));
+    ok('preset xiaomi ceiling defaults',
+      s.mount==='ceiling'&&s.hFov===110&&s.vFov===60&&s.rangePresence===4000&&s.rangeMotion===7000&&s.height===2400&&s.tilt===0);
+    s=State.defaults();
+    Interact.applyPreset(s, variantOf('xiaomi-pro','side'));
+    ok('preset xiaomi side',
+      s.mount==='side'&&s.height===1800&&s.tilt===30&&s.hFov===110&&s.vFov===60);
+    s=State.defaults();
+    Interact.applyPreset(s, variantOf('xiaomi-pro','corner'));
+    ok('preset xiaomi corner',
+      s.mount==='corner'&&s.height===1500&&s.tilt===0&&s.hAngle===45&&s.hFov===110&&s.vFov===60);
+    s=State.defaults();
+    Interact.applyPreset(s, variantOf('xiaomi-pro','ceiling'));
+    ok('variant matches after apply', Interact.variantMatchesState(s, variantOf('xiaomi-pro','ceiling')));
+    s.hFov=111;
+    ok('variant no match after tweak', !Interact.variantMatchesState(s, variantOf('xiaomi-pro','ceiling')));
+  })();
 };

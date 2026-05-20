@@ -109,9 +109,18 @@ Geo.inBeamAtHeight(fr, aH, aV, mm, h) === true
 
 其中 `fr = Geo.beamFrame(st)`、`aH = rad(hFov/2)`、`aV = rad(vFov/2)`、`P = (mm.x, mm.y, h)`、`S = fr.S`。这套判定**必须**完全复用渲染层用过的 `Geo.inBeamAtHeight` 与 `rangeProjectionRadius`，避免视觉色块与文字提示不一致。
 
-新建 `State.coverageZonesAt(st, mm)` 或 `Info.coverage(st, mm)` 暴露这一判定（4 个布尔值的数组）；推荐放 `Info`（不污染 `State` 模块）。
+在 `Info` 模块新增 `Info.coverage(st, mm)`，返回对象：
 
-布局：2×2，每个格子 `<dot> <label> <h>mm`。`dot` 是 10×10 圆，被覆盖时填实色，未覆盖时 `border` + 透明填充。房间外 / null 时显示 4 个未覆盖灰点。
+```js
+{ stand: bool,  // h=1200
+  sit:   bool,  // h=750
+  lie:   bool,  // h=600
+  ground:bool } // h=0
+```
+
+(挑对象形式而非数组，是为了让测试断言、UI 渲染都按语义命名访问，避免下标 0/1/2/3 与 LAYERS 顺序不一致的隐患。)
+
+布局：2×2，每个格子 `<dot> <label> <h>mm`。`dot` 是 10×10 圆，被覆盖时填实色，未覆盖时 `border` + 透明填充。房间外 / null 时显示 4 个未覆盖灰点。视觉次序：左上 站 → 右上 坐 → 左下 躺 → 右下 地（自高到低，与一般认知一致；与 LAYERS 数组的低-高顺序无关）。
 
 ### 4.4 工具栏「传感器预设」组
 
@@ -258,11 +267,12 @@ window.SensorPresets = [
 ### 5.1 tests.js 新增断言（node tools/run-tests.mjs）
 
 - **coverage zone classification（4 条）**
-  - 默认吸顶、传感器在中心、`coverage(st, {x: room.W/2, y: room.D/2})` 返回 `[true,true,true,true]`。
-  - 同场景的房间角点 `(0,0)`，至少 1 个高度返回 false（必有边界外）。
-  - `coverage(st, null)` 与 `coverage(st, {x:-100,y:0})` 返回 `[false,false,false,false]`。
+  - 默认吸顶、传感器在中心、`Info.coverage(st, {x: room.W/2, y: room.D/2})` 返回 `{stand:true, sit:true, lie:true, ground:true}`。
+  - 同场景的房间角点 `(0,0)`，`Info.coverage(...).stand === false`（站层在角点不被覆盖：默认 4000×3000 房间 + sensor 中心 + rangeMotion 5000，角点 3D 距离 ≈ 2960，但站 1200 与 sensor 2400 的高度差和近 FOV 边界会导致角点超出椭圆 — 该断言用真实几何而不是预判结果，先实测取值再写死）。
+  - `Info.coverage(st, null)` 返回 `{stand:false, sit:false, lie:false, ground:false}`。
+  - `Info.coverage(st, {x:-100, y:0})` 返回 `{stand:false, sit:false, lie:false, ground:false}`。
 - **apply preset semantics（5 条）**
-  - 应用 `ziqing-trio` 侧装：`mount==='side' && hFov===160 && rangePresence===6000 && rangeMotion===7000 && height===1500 && tilt===0`（5 个 AND 拆 5 条断言或合 1 条）。
+  - 应用 `ziqing-trio` 侧装：`mount==='side' && hFov===160 && rangePresence===6000 && rangeMotion===7000 && height===1500 && tilt===0`（合 1 条 AND 断言）。
   - 应用 `ziqing-celling` 吸顶：`mount==='ceiling' && vFov===160 && height===2400`（高度由 MOUNT_DEFAULTS 兜底）。
   - 应用 `xiaomi-pro` 吸顶：`mount==='ceiling' && hFov===110 && vFov===60 && height===2400 && tilt===0`。
   - 应用 `xiaomi-pro` 侧装：`mount==='side' && height===1800 && tilt===30`。
@@ -271,10 +281,12 @@ window.SensorPresets = [
   - `Interact.clamp(160, 45, 160, 90) === 160`。
   - `Interact.clamp(6000, 3000, 6000, 3000) === 6000`。
 - **variantMatchesState（2 条）**
-  - 默认 state 与任何 variant 全字段一致时返回 true（用一个测试用 state 构造）。
-  - 把 hFov 改 1°，立即返回 false。
+  - 默认 state 应用 `xiaomi-pro` 吸顶后，`variantMatchesState(st, xiaomi-pro 的 ceiling variant)` 返回 true。
+  - 把上一步的 hFov 手动改 1°，`variantMatchesState` 返回 false。
 
 合计 +13 断言（73 → 86）。
+
+> §coverage zone 第 2 条「角点 stand 是否被覆盖」依赖具体几何，撰写测试时应先在 Node 里跑一次 `Info.coverage(...).stand` 获取真值，再把结果写死成断言；spec 中给出的"应为 false"只是预期方向，最终值以实测为准。
 
 ### 5.2 浏览器视觉验证（playwright）
 

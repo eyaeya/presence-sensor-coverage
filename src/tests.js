@@ -229,6 +229,8 @@ Tests.extra=function(ok,approx){
   } else {
     ok('legend renders six fixed items once', false);
   }
+  // --- Presets Dropdown · height lower bound ---
+  ok('clamp side height 200', Interact.clamp(200,200,2000,1000)===200);
   var oldTools=document.getElementById('tools');
   if(oldTools){
     oldTools.innerHTML='';

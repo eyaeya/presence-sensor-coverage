@@ -66,7 +66,7 @@ var Interact=(function(){
     if(st.mount==='ceiling') return num('水平角 φ (0-360°)','hAngle',0,360,1,false);
     return num('水平角 ψ (-90~90°)','hAngle',-90,90,1,false); // side
   }
-  function hRange(){var lim={ceiling:[2000,5000],side:[1000,2000],corner:[1000,2000]}[st.mount];
+  function hRange(){var lim={ceiling:[2000,5000],side:[200,2000],corner:[200,2000]}[st.mount];
     return num('安装高度 (mm)','height',lim[0],lim[1],10,false);}
   function presetsGroup(){
     var container=document.createElement('div');container.className='preset-container';
@@ -111,7 +111,7 @@ var Interact=(function(){
     if(variant.rangePresence != null) state.rangePresence = clamp(variant.rangePresence, 3000, 6000);
     if(variant.rangeMotion   != null) state.rangeMotion   = clamp(variant.rangeMotion,   5000, 8000);
     if(variant.height        != null){
-      var lim = {ceiling:[2000,5000], side:[1000,2000], corner:[1000,2000]}[state.mount];
+      var lim = {ceiling:[2000,5000], side:[200,2000], corner:[200,2000]}[state.mount];
       state.height = clamp(variant.height, lim[0], lim[1]);
     }
     if(variant.tilt          != null) state.tilt          = clamp(variant.tilt,          0,    30);

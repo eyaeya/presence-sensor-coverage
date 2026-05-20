@@ -94,6 +94,7 @@ var Info=(function(){
   }
   function addCoverageGrid(box,st,hv){
     var grid=document.createElement('div');grid.className='coverage';
+    // hv.left===mm.x、hv.bottom===mm.y（见 hover()），可直接复用作为 coverage 输入。
     var cv=hv ? coverage(st, {x:hv.left, y:hv.bottom}) : {stand:false,sit:false,lie:false,ground:false};
     var items=[
       {key:'stand',  label:'站', h:1200, color:'#9b8cff'},

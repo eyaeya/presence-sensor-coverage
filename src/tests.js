@@ -239,7 +239,7 @@ Tests.extra=function(ok,approx){
     function inputByType(root,type){var all=desc(root,function(e){return (e.tagName||'').toLowerCase()==='input'&&e.type===type;});return all[0]||null;}
     function inputsByType(root,type){return desc(root,function(e){return (e.tagName||'').toLowerCase()==='input'&&e.type===type;});}
     var groups=desc(oldTools,function(e){return e.className==='tool-group-title';}).map(function(e){return e.textContent;}).join(',');
-    ok('tool groups render categories', groups==='空间,安装,视场,距离');
+    ok('tool groups render categories', groups==='空间,安装,视场,距离,传感器预设');
     var hCtl=ctlByLabel(oldTools,'水平 FOV'),hNum=hCtl?inputByType(hCtl,'number'):null;
     if(hNum&&typeof hNum.dispatchEvent==='function'){
       hNum.value='';hNum.dispatchEvent({type:'input'});

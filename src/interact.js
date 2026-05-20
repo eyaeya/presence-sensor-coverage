@@ -68,6 +68,26 @@ var Interact=(function(){
   }
   function hRange(){var lim={ceiling:[2000,5000],side:[1000,2000],corner:[1000,2000]}[st.mount];
     return num('安装高度 (mm)','height',lim[0],lim[1],10,false);}
+  function presetsGroup(){
+    var container=document.createElement('div');container.className='preset-container';
+    if(!window.SensorPresets||!window.SensorPresets.length){
+      var empty=document.createElement('div');empty.style.color='#6b7280';empty.style.fontSize='11px';empty.textContent='(无预设)';
+      container.appendChild(empty); return container;
+    }
+    window.SensorPresets.forEach(function(p){
+      var row=document.createElement('div');row.className='preset-row';
+      var name=document.createElement('span');name.className='preset-name';name.textContent=p.name;row.appendChild(name);
+      var variants=document.createElement('div');variants.className='preset-variants';
+      p.variants.forEach(function(v){
+        var btn=document.createElement('button');btn.className='preset-btn'+(variantMatchesState(st,v)?' on':'');
+        btn.textContent=v.label;
+        btn.addEventListener('click',function(){applyPreset(st,v);});
+        variants.appendChild(btn);
+      });
+      row.appendChild(variants);container.appendChild(row);
+    });
+    return container;
+  }
   function rebuild(){
     var box=document.getElementById('tools');box.innerHTML='';
     function group(title,items){
@@ -81,6 +101,7 @@ var Interact=(function(){
     group('安装',[hRange(),num('下倾角 (0-30°)','tilt',0,30,1, st.mount==='ceiling'),hAngleCtl()]);
     group('视场',[num('水平 FOV (90-160°)','hFov',90,160,1,false),num('垂直 FOV (45-160°)','vFov',45,160,1,false)]);
     group('距离',[num('存在距离 (3000-6000)','rangePresence',3000,6000,50,false),num('运动距离 (5000-8000)','rangeMotion',5000,8000,50,false)]);
+    group('传感器预设',[presetsGroup()]);
   }
   function init(state,cb){st=state;onChange=cb;rebuild();}
   function applyPreset(state, variant){

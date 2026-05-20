@@ -365,4 +365,36 @@ Tests.extra=function(ok,approx){
     s=State.defaults(); if(v4)Interact.applyPreset(s, v4);
     ok('apply 2s preserves height 200', v4&&s.height===200);
   })();
+  (function(){
+    var stU=State.defaults();
+    Interact.init(stU,function(){});
+    var toolsBox=document.getElementById('tools');
+    var selectEls=[];
+    function findByTag(el,tag){var out=[];if(!el||!el.children)return out;for(var i=0;i<el.children.length;i++){if((el.children[i].tagName||'').toLowerCase()===tag.toLowerCase())out.push(el.children[i]);out=out.concat(findByTag(el.children[i],tag));}return out;}
+    selectEls=findByTag(toolsBox,'select');
+    var sel=selectEls.length>0?selectEls[0]:null;
+    var optCount=sel&&sel.children?sel.children.length:0;
+    var totalVariants=window.SensorPresets.reduce(function(a,p){return a+p.variants.length;},0);
+    ok('dropdown option count matches variants', optCount===totalVariants);
+    var firstOpt=sel&&sel.children?sel.children[0]:null;
+    ok('dropdown first option', firstOpt&&firstOpt.value==='ziqing-trio:side'&&firstOpt.textContent==='子擎 Trio / 侧装');
+    function variantOf(id,mount){
+      var p=window.SensorPresets.filter(function(x){return x.id===id;})[0];
+      return p&&p.variants.filter(function(v){return v.mount===mount;})[0];
+    }
+    Interact.applyPreset(stU, variantOf('ziqing-lite','ceiling'));
+    var presContainers=[];
+    function findByClass(el,cls){var out=[];if(!el||!el.children)return out;if((el.className||'').indexOf(cls)>=0)out.push(el);for(var i=0;i<el.children.length;i++)out=out.concat(findByClass(el.children[i],cls));return out;}
+    presContainers=findByClass(toolsBox,'preset-current');
+    var curCont=presContainers.length>0?presContainers[0]:null;
+    var curSpan=curCont&&curCont.children?curCont.children[1]:null;
+    ok('preset-current after apply lite ceiling', curSpan&&curSpan.textContent==='子擎 Lite / 顶装');
+    stU.hFov=99;
+    Interact.init(stU,function(){});
+    presContainers=[];
+    presContainers=findByClass(document.getElementById('tools'),'preset-current');
+    var curCont2=presContainers.length>0?presContainers[0]:null;
+    var curSpan2=curCont2&&curCont2.children?curCont2.children[1]:null;
+    ok('preset-current dash when no match', curSpan2&&curSpan2.textContent==='—');
+  })();
 };

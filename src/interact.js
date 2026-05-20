@@ -1,5 +1,6 @@
 /* ===== Interact ===== */
 var Interact=(function(){
+  var lastPresetKey=null;
   function clamp(v,lo,hi,fb){v=parseFloat(v);if(isNaN(v))return fb!=null?fb:lo;return v<lo?lo:v>hi?hi:v;}
   var st,onChange;
   function num(label,key,lo,hi,step,disabled){
@@ -69,24 +70,47 @@ var Interact=(function(){
   function hRange(){var lim={ceiling:[2000,5000],side:[200,2000],corner:[200,2000]}[st.mount];
     return num('安装高度 (mm)','height',lim[0],lim[1],10,false);}
   function presetsGroup(){
-    var container=document.createElement('div');container.className='preset-container';
+    var c=document.createElement('div');c.className='preset-container';
     if(!window.SensorPresets||!window.SensorPresets.length){
       var empty=document.createElement('div');empty.style.color='#6b7280';empty.style.fontSize='11px';empty.textContent='(无预设)';
-      container.appendChild(empty); return container;
+      c.appendChild(empty); return c;
     }
+    var MOUNT_SHORT={ceiling:'顶装',side:'侧装',corner:'角装'};
+    var flat=[];
     window.SensorPresets.forEach(function(p){
-      var row=document.createElement('div');row.className='preset-row';
-      var name=document.createElement('span');name.className='preset-name';name.textContent=p.name;row.appendChild(name);
-      var variants=document.createElement('div');variants.className='preset-variants';
       p.variants.forEach(function(v){
-        var btn=document.createElement('button');btn.className='preset-btn'+(variantMatchesState(st,v)?' on':'');
-        btn.textContent=v.label;
-        btn.addEventListener('click',function(){applyPreset(st,v);});
-        variants.appendChild(btn);
+        flat.push({model:p, variant:v,
+          key:p.id+':'+v.mount,
+          label:p.name+' / '+(MOUNT_SHORT[v.mount]||v.mount)});
       });
-      row.appendChild(variants);container.appendChild(row);
     });
-    return container;
+    var row1=document.createElement('div');row1.className='preset-row1';
+    var sel=document.createElement('select');sel.className='preset-select';
+    flat.forEach(function(f){
+      var o=document.createElement('option');o.value=f.key;o.textContent=f.label;
+      sel.appendChild(o);
+    });
+    if(lastPresetKey){
+      for(var i=0;i<flat.length;i++){
+        if(flat[i].key===lastPresetKey){ sel.value=lastPresetKey; break; }
+      }
+    }
+    var btn=document.createElement('button');btn.className='preset-apply';btn.textContent='使用';
+    btn.addEventListener('click',function(){
+      lastPresetKey=sel.value;
+      var pick=flat.filter(function(f){return f.key===sel.value;})[0];
+      if(pick) applyPreset(st,pick.variant);
+    });
+    row1.appendChild(sel);row1.appendChild(btn);
+    c.appendChild(row1);
+    var cur=document.createElement('div');cur.className='preset-current';
+    var span=document.createElement('span');
+    var matched=flat.filter(function(f){return variantMatchesState(st,f.variant);})[0];
+    cur.appendChild(document.createTextNode('当前: '));
+    span.textContent=matched?matched.label:'—';
+    cur.appendChild(span);
+    c.appendChild(cur);
+    return c;
   }
   function rebuild(){
     var box=document.getElementById('tools');box.innerHTML='';

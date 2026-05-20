@@ -17,7 +17,8 @@ window.SensorPresets = [
     name: "子擎 Celling",
     variants: [
       { mount: "ceiling", label: "吸顶",
-        hFov: 160, vFov: 160, rangePresence: 4000, rangeMotion: 5500 }
+        hFov: 160, vFov: 160, rangePresence: 4000, rangeMotion: 5500,
+        tilt: 0 }
     ]
   },
   {
@@ -25,7 +26,8 @@ window.SensorPresets = [
     name: "小米人在 Pro",
     variants: [
       { mount: "ceiling", label: "吸顶",
-        hFov: 110, vFov: 60,  rangePresence: 4000, rangeMotion: 7000 },
+        hFov: 110, vFov: 60,  rangePresence: 4000, rangeMotion: 7000,
+        tilt: 0 },
       { mount: "side",    label: "侧装",
         hFov: 110, vFov: 60,  rangePresence: 4000, rangeMotion: 7000,
         height: 1800, tilt: 30 },

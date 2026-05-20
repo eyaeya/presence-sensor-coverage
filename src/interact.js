@@ -85,7 +85,6 @@ var Interact=(function(){
   function init(state,cb){st=state;onChange=cb;rebuild();}
   function applyPreset(state, variant){
     State.applyMount(state, variant.mount);
-    state.tilt=0; // default tilt for all mounts
     if(variant.hFov          != null) state.hFov          = clamp(variant.hFov,          90,   160);
     if(variant.vFov          != null) state.vFov          = clamp(variant.vFov,          45,   160);
     if(variant.rangePresence != null) state.rangePresence = clamp(variant.rangePresence, 3000, 6000);

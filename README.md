@@ -1,8 +1,14 @@
 # 人在传感器安装定位可视化
 
+[![在线访问](https://img.shields.io/badge/在线访问-eyaeya.github.io-2ea44f?logo=github&logoColor=white)](https://eyaeya.github.io/presence-sensor-coverage/)
+[![No Build](https://img.shields.io/badge/build-none-blue)](#-快速开始)
+[![Vanilla JS](https://img.shields.io/badge/JS-Vanilla%20%2B%20SVG-yellow)](#)
+
 > 一个零依赖、单文件即可运行的顶视图交互工具，用来实时仿真**人在传感器（毫米波雷达类）** 在不同安装方式、安装位置、下倾角、FOV 与探测距离下，对一个矩形房间的**存在 / 运动覆盖**情况。
 
 适用于家装、智能家居、安防、办公空间等场景下的传感器选型与点位规划。
+
+**🌐 立即试用：<https://eyaeya.github.io/presence-sensor-coverage/>**
 
 ---
 
@@ -21,7 +27,11 @@
 
 ## 🚀 快速开始
 
-直接双击或用浏览器打开 [index.html](index.html) 即可：
+**最快**：直接打开在线版本即用，无需克隆：
+
+➡️ **<https://eyaeya.github.io/presence-sensor-coverage/>**
+
+**本地运行**（克隆或下载本仓库后）：
 
 ```bash
 # 方式一：直接打开（macOS）

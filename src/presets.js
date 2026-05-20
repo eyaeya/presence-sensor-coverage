@@ -42,10 +42,10 @@ window.SensorPresets = [
     variants: [
       { mount: "ceiling", label: "吸顶",
         hFov: 130, vFov: 130, rangePresence: 4000, rangeMotion: 8000,
-        tilt: 0 },
+        height: 2400, tilt: 0 },
       { mount: "side",    label: "侧装",
         hFov: 130, vFov: 130, rangePresence: 4000, rangeMotion: 8000,
-        tilt: 0 }
+        height: 1500, tilt: 0 }
     ]
   },
   {
